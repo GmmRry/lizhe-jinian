@@ -3,321 +3,297 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>李林喆</title>
+<title>李林喆 · 星河</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;overflow:hidden;font-family:'PingFang SC','Noto Sans SC',sans-serif;cursor:none;user-select:none;-webkit-user-select:none}
-canvas{position:fixed;top:0;left:0;z-index:0}
+  :root{--bg:#050510}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--bg);overflow:hidden;
+    font-family:'PingFang SC','Noto Sans SC','Inter',-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    cursor:crosshair;
+  }
+  canvas{display:block;position:fixed;top:0;left:0}
 
-/* Central text */
-.hero{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1;text-align:center;pointer-events:none}
-.hero h1{
-  font-size:clamp(3rem,8vw,7rem);font-weight:900;letter-spacing:.05em;
-  background:linear-gradient(135deg,#a78bfa,#60a5fa,#34d399,#f472b6,#fbbf24);
-  background-size:400% 400%;
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;
-  animation:shimmer 4s ease infinite;
-  margin-bottom:16px;
-}
-.hero p{font-size:clamp(.9rem,2vw,1.2rem);color:rgba(255,255,255,.35);letter-spacing:.2em}
-@keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+  .overlay{
+    position:fixed;inset:0;z-index:2;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 50%,transparent 0%,rgba(5,5,16,.4) 65%,rgba(5,5,16,.82) 100%);
+  }
 
-/* Custom cursor trail dot */
-.cursor{position:fixed;pointer-events:none;z-index:9999;width:6px;height:6px;background:white;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 20px rgba(168,139,250,.8),0 0 60px rgba(96,165,250,.4);transition:width .2s,height .2s}
-.cursor.active{width:12px;height:12px;box-shadow:0 0 30px rgba(251,191,36,.9),0 0 80px rgba(244,114,182,.6)}
+  .type-wrap{
+    position:fixed;bottom:13vh;left:50%;transform:translateX(-50%);z-index:3;
+    text-align:center;pointer-events:none;
+  }
+  .type-sub{
+    font-size:clamp(.7rem,1.2vw,.85rem);letter-spacing:.35em;
+    color:rgba(180,200,255,.4);margin-bottom:14px;text-transform:uppercase;
+    animation:fadeUp 1.8s cubic-bezier(.16,1,.3,1) .5s both;
+  }
+  .type-name{
+    font-size:clamp(3.5rem,10vw,9rem);font-weight:200;letter-spacing:.08em;line-height:1;
+    background:linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(180,200,255,.7) 45%,rgba(120,150,255,.35) 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;
+    animation:fadeUp 1.8s cubic-bezier(.16,1,.3,1) .7s both;
+  }
+  .type-line{
+    display:block;width:1px;height:56px;margin:24px auto;
+    background:linear-gradient(180deg,rgba(255,255,255,0),rgba(180,200,255,.45),rgba(255,255,255,0));
+    animation:fadeUp 1.8s cubic-bezier(.16,1,.3,1) .9s both;
+  }
+  .type-tag{
+    font-size:clamp(.7rem,1vw,.8rem);letter-spacing:.25em;
+    color:rgba(180,200,255,.25);
+    animation:fadeUp 1.8s cubic-bezier(.16,1,.3,1) 1.1s both;
+  }
+  .hint{
+    position:fixed;bottom:32px;right:36px;z-index:3;pointer-events:none;
+    font-size:.6rem;letter-spacing:.22em;color:rgba(255,255,255,.1);
+    animation:fadeUp 1.8s cubic-bezier(.16,1,.3,1) 2s both;
+  }
 
-/* Bottom hint */
-.hint{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:2;color:rgba(255,255,255,.2);font-size:.75rem;letter-spacing:.15em;pointer-events:none;animation:pulse 3s ease infinite}
-@keyframes pulse{0%,100%{opacity:.2}50%{opacity:.5}}
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(36px);filter:blur(8px)}
+    to{opacity:1;transform:translateY(0);filter:blur(0)}
+  }
 </style>
 </head>
 <body>
 
-<canvas id="bg"></canvas>
-<div class="cursor" id="cursor"></div>
+<div class="overlay"></div>
 
-<div class="hero">
-  <h1>李林喆</h1>
-  <p>拖动鼠标 · 聚拢星河</p>
+<div class="type-wrap">
+  <p class="type-sub">Class of 2026 · Nebula</p>
+  <h1 class="type-name">李林喆</h1>
+  <span class="type-line"></span>
+  <p class="type-tag">万物皆星尘 · 你亦如是</p>
 </div>
-<div class="hint">移动鼠标聚集粒子 · 松开散射</div>
 
-<script>
-// ── GPU-accelerated particle system ──
-const canvas = document.getElementById('bg');
-const ctx = canvas.getContext('2d');
-const cursorEl = document.getElementById('cursor');
+<div class="hint">拖拽旋转 · 滚轮缩放 · 移动触发光迹</div>
 
-let W, H, mouseX=-999, mouseY=-999, mouseDown=false;
-const PARTICLE_COUNT = 180;
-const particles = [];
-const colors = [
-  'rgba(168,139,250,',  // purple
-  'rgba(96,165,250,',   // blue
-  'rgba(52,211,153,',   // green
-  'rgba(244,114,182,',  // pink
-  'rgba(251,191,36,',   // gold
-  'rgba(129,140,248,',  // indigo
-  'rgba(94,234,212,',   // teal
-  'rgba(253,224,71,',   // yellow
-];
-
-function resize(){
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
 }
-window.addEventListener('resize', resize);
-resize();
+</script>
 
-// Particle class
-class Particle {
-  constructor(){
-    this.reset();
-    this.x = Math.random() * W;
-    this.y = Math.random() * H;
-    this.hx = this.x; this.hy = this.y; // home position
-  }
-  reset(){
-    this.radius = Math.random() * 3 + 1;
-    this.color = colors[Math.floor(Math.random() * colors.length)];
-    this.vx = (Math.random() - .5) * .8;
-    this.vy = (Math.random() - .5) * .8;
-    this.opacity = Math.random() * .5 + .3;
-    this.twinkleSpeed = Math.random() * .02 + .005;
-    this.twinkleOffset = Math.random() * Math.PI * 2;
-    this.angle = Math.random() * Math.PI * 2;
-    this.orbitRadius = Math.random() * 200 + 50;
-    this.orbitSpeed = (Math.random() - .5) * .003;
-  }
-  update(t){
-    // Twinkling opacity
-    this.currentOpacity = this.opacity + Math.sin(t * this.twinkleSpeed + this.twinkleOffset) * .2;
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-    if (mouseDown) {
-      // Attract toward mouse
-      const dx = mouseX - this.x;
-      const dy = mouseY - this.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const force = Math.min(150 / (dist + 10), 3);
-      this.vx += dx / (dist + 1) * force * .15;
-      this.vy += dy / (dist + 1) * force * .15;
-      // Damping
-      this.vx *= .92;
-      this.vy *= .92;
-    } else {
-      // Float back toward home + gentle orbit
-      const dx = this.hx - this.x;
-      const dy = this.hy - this.y;
-      this.vx += dx * .001;
-      this.vy += dy * .001;
-      this.vx *= .97;
-      this.vy *= .97;
-      // Orbital drift
-      this.angle += this.orbitSpeed;
-      this.vx += Math.cos(this.angle) * .02;
-      this.vy += Math.sin(this.angle) * .02;
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, .1, 200);
+camera.position.set(0, 0, 28);
+
+const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+document.body.appendChild(renderer.domElement);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(
+  new THREE.Vector2(innerWidth, innerHeight), .85, .4, .2
+);
+bloom.threshold = .1;
+bloom.strength = 1.25;
+bloom.radius = .6;
+composer.addPass(bloom);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = .06;
+controls.autoRotate = true;
+controls.autoRotateSpeed = .22;
+controls.minDistance = 7;
+controls.maxDistance = 55;
+controls.maxPolarAngle = Math.PI * .75;
+controls.target.set(0, 0, 0);
+controls.update();
+
+const mouse = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+window.addEventListener('mousemove', e => {
+  mouse.x = (e.clientX / innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+});
+
+// ── Galaxy Core ──
+const coreGeo = new THREE.BufferGeometry();
+const CORE = 2000;
+const corePos = new Float32Array(CORE * 3);
+const coreCol = new Float32Array(CORE * 3);
+
+for(let i=0; i<CORE; i++){
+  const t = Math.random() * Math.PI * 2;
+  const r = Math.pow(Math.random(), 1.9) * 13;
+  const spiral = t + r * .38;
+  const x = Math.cos(spiral) * r + (Math.random()-.5) * r * .55;
+  const y = (Math.random()-.5) * r * .42;
+  const z = Math.sin(spiral) * r * .55 + (Math.random()-.5) * r * .38;
+
+  corePos[i*3] = x;
+  corePos[i*3+1] = y;
+  corePos[i*3+2] = z;
+
+  const col = new THREE.Color();
+  col.setHSL(.62 + (r/13)*.08, .85, .5 + Math.random()*.4);
+  coreCol[i*3]=col.r; coreCol[i*3+1]=col.g; coreCol[i*3+2]=col.b;
+}
+
+coreGeo.setAttribute('position', new THREE.BufferAttribute(corePos, 3));
+coreGeo.setAttribute('color', new THREE.BufferAttribute(coreCol, 3));
+const coreMat = new THREE.PointsMaterial({
+  size:.07, vertexColors:true, blending:THREE.AdditiveBlending,
+  depthWrite:false, transparent:true, opacity:.88,
+});
+const core = new THREE.Points(coreGeo, coreMat);
+scene.add(core);
+
+// ── Outer Halo ──
+const haloGeo = new THREE.BufferGeometry();
+const HALO = 2400;
+const haloPos = new Float32Array(HALO * 3);
+const haloCol = new Float32Array(HALO * 3);
+
+for(let i=0; i<HALO; i++){
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 5.5 + Math.random() * 17;
+  const y = (Math.random() - .5) * 2.8;
+  haloPos[i*3] = Math.cos(angle) * radius;
+  haloPos[i*3+1] = y;
+  haloPos[i*3+2] = Math.sin(angle) * radius;
+  const col = new THREE.Color();
+  col.setHSL(.57 + Math.random()*.16, .65, .55 + Math.random()*.35);
+  haloCol[i*3]=col.r; haloCol[i*3+1]=col.g; haloCol[i*3+2]=col.b;
+}
+
+haloGeo.setAttribute('position', new THREE.BufferAttribute(haloPos, 3));
+haloGeo.setAttribute('color', new THREE.BufferAttribute(haloCol, 3));
+const haloMat = new THREE.PointsMaterial({
+  size:.045, vertexColors:true, blending:THREE.AdditiveBlending,
+  depthWrite:false, transparent:true, opacity:.65,
+});
+const halo = new THREE.Points(haloGeo, haloMat);
+scene.add(halo);
+
+// ── Ambient Dust ──
+const dustGeo = new THREE.BufferGeometry();
+const DUST = 900;
+const dustPos = new Float32Array(DUST * 3);
+const dustCol = new Float32Array(DUST * 3);
+const dustData = [];
+
+for(let i=0; i<DUST; i++){
+  const x = (Math.random()-.5) * 42;
+  const y = (Math.random()-.5) * 26;
+  const z = (Math.random()-.5) * 38;
+  dustPos[i*3]=x; dustPos[i*3+1]=y; dustPos[i*3+2]=z;
+  dustData.push({x,y,z,vx:(Math.random()-.5)*.007,vy:(Math.random()-.5)*.007,vz:(Math.random()-.5)*.007});
+  const col = new THREE.Color();
+  col.setHSL(.58+Math.random()*.16,.45,.5+Math.random()*.4);
+  dustCol[i*3]=col.r; dustCol[i*3+1]=col.g; dustCol[i*3+2]=col.b;
+}
+
+dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+dustGeo.setAttribute('color', new THREE.BufferAttribute(dustCol, 3));
+const dustMat = new THREE.PointsMaterial({
+  size:.035, vertexColors:true, blending:THREE.AdditiveBlending,
+  depthWrite:false, transparent:true, opacity:.45,
+});
+const dust = new THREE.Points(dustGeo, dustMat);
+scene.add(dust);
+
+// ── Mouse Trail Sparkles ──
+const sparkGeo = new THREE.BufferGeometry();
+const SPARK = 100;
+const sparkPos = new Float32Array(SPARK * 3);
+const sparkLife = new Float32Array(SPARK);
+
+for(let i=0; i<SPARK; i++){
+  sparkPos[i*3]=sparkPos[i*3+1]=sparkPos[i*3+2]=0;
+  sparkLife[i]=0;
+}
+
+sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+const sparkMat = new THREE.PointsMaterial({
+  size:.09, color:new THREE.Color('#c8b8ff'), blending:THREE.AdditiveBlending,
+  depthWrite:false, transparent:true, opacity:.75,
+});
+const sparks = new THREE.Points(sparkGeo, sparkMat);
+scene.add(sparks);
+
+// ── Animation ──
+const clock = new THREE.Clock();
+let sparkIdx = 0;
+const plane = new THREE.Plane(new THREE.Vector3(0,0,1), 0);
+
+function animate(){
+  const dt = Math.min(clock.getDelta(), .12);
+
+  core.rotation.y += dt * .055;
+  halo.rotation.y -= dt * .028;
+  halo.rotation.x += dt * .012;
+
+  // Float dust
+  const dp = dust.geometry.attributes.position.array;
+  for(let i=0; i<DUST; i++){
+    const d = dustData[i];
+    d.x += d.vx; d.y += d.vy; d.z += d.vz;
+    if(Math.abs(d.x)>21) d.vx*=-1;
+    if(Math.abs(d.y)>13) d.vy*=-1;
+    if(Math.abs(d.z)>19) d.vz*=-1;
+    dp[i*3]=d.x; dp[i*3+1]=d.y; dp[i*3+2]=d.z;
+  }
+  dust.geometry.attributes.position.needsUpdate = true;
+
+  // Cursor intersection sparks
+  raycaster.setFromCamera(mouse, camera);
+  const hit = new THREE.Vector3();
+  raycaster.ray.intersectPlane(plane, hit);
+
+  if(hit && Math.random()<.65){
+    const sp = sparkGeo.attributes.position.array;
+    const i = sparkIdx % SPARK;
+    sp[i*3] = hit.x + (Math.random()-.5)*.25;
+    sp[i*3+1] = hit.y + (Math.random()-.5)*.25;
+    sp[i*3+2] = (Math.random()-.5)*.15;
+    sparkLife[i] = 1;
+    sparkIdx++;
+  }
+
+  const sp2 = sparkGeo.attributes.position.array;
+  for(let i=0; i<SPARK; i++){
+    sparkLife[i] -= dt * 1.5;
+    if(sparkLife[i]<=0){
+      sp2[i*3]=sp2[i*3+1]=sp2[i*3+2]=0;
+      sparkLife[i]=0;
     }
-
-    // Update position
-    this.x += this.vx;
-    this.y += this.vy;
-
-    // Wrap edges
-    if(this.x < -20) this.x = W + 20;
-    if(this.x > W + 20) this.x = -20;
-    if(this.y < -20) this.y = H + 20;
-    if(this.y > H + 20) this.y = -20;
   }
-  draw(ctx){
-    const r = mouseDown ? this.radius * 1.5 : this.radius;
-    const alpha = Math.max(0, Math.min(1, this.currentOpacity));
-    // Glow
-    const glow = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r * 3);
-    glow.addColorStop(0, this.color + (alpha * .6) + ')');
-    glow.addColorStop(.5, this.color + (alpha * .15) + ')');
-    glow.addColorStop(1, this.color + '0)');
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, r * 3, 0, Math.PI * 2);
-    ctx.fillStyle = glow;
-    ctx.fill();
-    // Core
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = this.color + alpha + ')';
-    ctx.fill();
-  }
-}
+  sparkGeo.attributes.position.needsUpdate = true;
 
-// Init particles
-for(let i=0; i<PARTICLE_COUNT; i++){
-  particles.push(new Particle());
-}
-
-// Mouse trail particles
-const trailParticles = [];
-const MAX_TRAIL = 40;
-
-function spawnTrailParticle(x, y){
-  return {
-    x, y,
-    vx: (Math.random() - .5) * 4,
-    vy: (Math.random() - .5) * 4,
-    life: 1,
-    decay: Math.random() * .04 + .02,
-    radius: Math.random() * 2 + .5,
-    color: colors[Math.floor(Math.random() * colors.length)],
-  };
-}
-
-// Mouse events
-document.addEventListener('mousemove', e => {
-  mouseX = e.clientX;
-  mouseY = e.clientY;
-  cursorEl.style.left = e.clientX + 'px';
-  cursorEl.style.top = e.clientY + 'px';
-  // Spawn trail particles
-  for(let i=0; i<2; i++){
-    trailParticles.push(spawnTrailParticle(e.clientX, e.clientY));
-    if(trailParticles.length > MAX_TRAIL) trailParticles.shift();
-  }
-});
-
-document.addEventListener('mousedown', () => {
-  mouseDown = true;
-  cursorEl.classList.add('active');
-  // Burst particles on click
-  for(let i=0; i<15; i++){
-    const p = spawnTrailParticle(mouseX, mouseY);
-    p.vx *= 3; p.vy *= 3; p.radius *= 2;
-    trailParticles.push(p);
-  }
-});
-
-document.addEventListener('mouseup', () => {
-  mouseDown = false;
-  cursorEl.classList.remove('active');
-  // Scatter burst
-  for(let p of particles){
-    const dx = p.x - mouseX;
-    const dy = p.y - mouseY;
-    const dist = Math.sqrt(dx*dx+dy*dy) || 1;
-    const force = 800 / (dist + 30);
-    p.vx += dx / dist * force;
-    p.vy += dy / dist * force;
-  }
-});
-
-// Touch events for mobile
-document.addEventListener('touchmove', e => {
-  e.preventDefault();
-  mouseX = e.touches[0].clientX;
-  mouseY = e.touches[0].clientY;
-  mouseDown = true;
-  cursorEl.style.left = mouseX + 'px';
-  cursorEl.style.top = mouseY + 'px';
-  cursorEl.classList.add('active');
-  for(let i=0; i<2; i++){
-    trailParticles.push(spawnTrailParticle(mouseX, mouseY));
-    if(trailParticles.length > MAX_TRAIL) trailParticles.shift();
-  }
-}, {passive: false});
-
-document.addEventListener('touchend', () => {
-  mouseDown = false;
-  cursorEl.classList.remove('active');
-});
-
-// Animation loop
-let time = 0;
-function animate(timestamp){
-  time = timestamp;
-  ctx.clearRect(0, 0, W, H);
-
-  // Update & draw main particles
-  for(let p of particles){
-    p.update(time);
-    p.draw(ctx);
-  }
-
-  // Connection lines between nearby particles
-  if(mouseDown){
-    ctx.globalAlpha = .3;
-    for(let i=0; i<particles.length; i+=2){
-      for(let j=i+2; j<particles.length; j+=2){
-        const dx = particles[i].x - particles[j].x;
-        const dy = particles[i].y - particles[j].y;
-        const dist = Math.sqrt(dx*dx+dy*dy);
-        if(dist < 80){
-          ctx.beginPath();
-          ctx.moveTo(particles[i].x, particles[i].y);
-          ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.strokeStyle = `rgba(255,255,255,${.06 * (1 - dist/80)})`;
-          ctx.lineWidth = .5;
-          ctx.stroke();
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // Draw & update trail particles
-  for(let i=trailParticles.length-1; i>=0; i--){
-    const tp = trailParticles[i];
-    tp.x += tp.vx;
-    tp.y += tp.vy;
-    tp.vx *= .95; tp.vy *= .95;
-    tp.life -= tp.decay;
-    if(tp.life <= 0){
-      trailParticles.splice(i, 1);
-      continue;
-    }
-    const alpha = tp.life * .7;
-    const glow = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, tp.radius * 4);
-    glow.addColorStop(0, tp.color + alpha + ')');
-    glow.addColorStop(1, tp.color + '0)');
-    ctx.beginPath();
-    ctx.arc(tp.x, tp.y, tp.radius * 4, 0, Math.PI*2);
-    ctx.fillStyle = glow;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(tp.x, tp.y, tp.radius, 0, Math.PI*2);
-    ctx.fillStyle = tp.color + alpha + ')';
-    ctx.fill();
-  }
-
-  // Draw mouse-glow when pressed
-  if(mouseDown && mouseX > 0){
-    const g = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 50);
-    g.addColorStop(0, 'rgba(255,255,255,.15)');
-    g.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.beginPath();
-    ctx.arc(mouseX, mouseY, 50, 0, Math.PI*2);
-    ctx.fillStyle = g;
-    ctx.fill();
-  }
-
+  controls.update();
+  composer.render();
   requestAnimationFrame(animate);
 }
 
-// Handle mouse leaving/entering window
-document.addEventListener('mouseleave', () => {
-  mouseDown = false;
-  cursorEl.classList.remove('active');
-  mouseX = -999; mouseY = -999;
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
 });
 
-requestAnimationFrame(animate);
-
-// Keyboard: press 'R' to scatter all particles
-document.addEventListener('keydown', e => {
-  if(e.key === 'r' || e.key === 'R'){
-    for(let p of particles){
-      p.vx += (Math.random()-.5) * 20;
-      p.vy += (Math.random()-.5) * 20;
-    }
-  }
-});
+animate();
 </script>
 </body>
 </html>
