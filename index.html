@@ -1,263 +1,167 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>·</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#020210;overflow:hidden;cursor:crosshair}
-  canvas{display:block;position:fixed;top:0;left:0}
-  .hint{
-    position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none;
-    font-family:'PingFang SC','Noto Sans SC',sans-serif;font-size:.6rem;letter-spacing:.28em;
-    color:rgba(255,255,255,.15);transition:opacity .5s;
-  }
-  .fader{
-    position:fixed;inset:0;z-index:4;pointer-events:none;background:#020210;
-    opacity:0;transition:opacity .8s;
-  }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#020210;overflow:hidden;cursor:crosshair}
+canvas{display:block;position:fixed;top:0;left:0}
+.hint{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none;font-family:'PingFang SC','Noto Sans SC',sans-serif;font-size:.6rem;letter-spacing:.28em;color:rgba(255,255,255,.15);transition:opacity .5s}
+.fader{position:fixed;inset:0;z-index:4;pointer-events:none;background:#020210;opacity:0;transition:opacity .8s}
 </style>
-</head>
 <body>
 <div class="fader" id="fader"></div>
-<div class="hint" id="hint">滚轮缩放 · 拖拽旋转</div>
-
-<script type="importmap">
-{"imports":{
-  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
-  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
-}}
-</script>
-
+<div class="hint" id="hint">滚轮缩放 · 靠近地球有惊喜</div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// ── Core setup ──
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x020210, .00006);
-
-const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, .3, 600);
-camera.position.set(0, 0, 30);
-
-const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
+const scene=new THREE.Scene;
+scene.fog=new THREE.FogExp2(0x020210,.00006);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.3,600);
+camera.position.set(0,0,30);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
 document.body.appendChild(renderer.domElement);
-
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.8,.4,.15);
-bloom.threshold=.08;bloom.strength=1.25;bloom.radius=.6;
-composer.addPass(bloom);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping=true;controls.dampingFactor=.06;
-controls.autoRotate=true;controls.autoRotateSpeed=.15;
-controls.minDistance=1.5;controls.maxDistance=300;
-controls.maxPolarAngle=Math.PI*.75;
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.8,.4,.15);
+bloom.threshold=.06;bloom.strength=1.4;bloom.radius=.65;composer.addPass(bloom);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.dampingFactor=.06;controls.autoRotate=true;controls.autoRotateSpeed=.15;
+controls.minDistance=1.5;controls.maxDistance=300;controls.maxPolarAngle=Math.PI*.75;
 controls.target.set(0,-80,-100);controls.update();
+const mouse=new THREE.Vector2,raycaster=new THREE.Raycaster;
+window.addEventListener('mousemove',e=>{mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1});
+const loader=new THREE.TextureLoader;
+let isSurfaceMode=false,transitionAlpha=0;
 
-const mouse=new THREE.Vector2();
-const raycaster=new THREE.Raycaster();
-window.addEventListener('mousemove',e=>{mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;});
+function hn(n){return(fract(Math.sin(n)*43758.5453)*2-1)*.5+.5}
+function fract(n){return n-Math.floor(n)}
+function lerp(a,b,t){return a+(b-a)*t}
+function noise2D(x,y){const X=Math.floor(x)&255,Y=Math.floor(y)&255;x-=Math.floor(x);y-=Math.floor(y);const u=x*x*(3-2*x),v=y*y*(3-2*y);return lerp(lerp(hn(X+Y*57),hn(X+1+Y*57),u),lerp(hn(X+(Y+1)*57),hn(X+1+(Y+1)*57),u),v)}
+function fbm(x,y){let v=0,a=.6,f=1;for(let i=0;i<5;i++){v+=a*noise2D(x*f,y*f);f*=2.2;a*=.5}return v}
 
-const loader=new THREE.TextureLoader();
-let isSurfaceMode=false;
-let transitionAlpha=0;
-
-// ── Simple noise ──
-function noise2D(x,y){
-  const X=Math.floor(x)&255,Y=Math.floor(y)&255;
-  x-=Math.floor(x);y-=Math.floor(y);
-  const u=x*x*(3-2*x),v=y*y*(3-2*y);
-  const a=(X+Y*57)*131;
-  return lerp(lerp(hash(a),hash(a+1),u),lerp(hash(a+57),hash(a+58),u),v);
-}
-function hash(n){return(fract(Math.sin(n)*43758.5453)*2-1)*.5+.5;}
-function fract(n){return n-Math.floor(n);}
-function lerp(a,b,t){return a+(b-a)*t;}
-function fbm(x,y){
-  let v=0,a=.6,f=1;
-  for(let i=0;i<5;i++){v+=a*noise2D(x*f,y*f);f*=2.2;a*=.5;}
-  return v;
-}
-
-// ═══════════════════════════════════════════
-// SPACE: SUN
-// ═══════════════════════════════════════════
-const sunGroup=new THREE.Group();
-sunGroup.position.set(90,15,-120);scene.add(sunGroup);
-const sunGeo=new THREE.SphereGeometry(14,64,64);
-const sunMat=new THREE.ShaderMaterial({
-  uniforms:{uTime:{value:0}},
-  vertexShader:`varying vec2 vUv;varying vec3 vP;void main(){vUv=uv;vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-  fragmentShader:`varying vec2 vUv;varying vec3 vP;uniform float uTime;
-    float n(vec3 p){return fract(sin(dot(p,vec3(12.9,78.2,45.5)))*43758.);}
-    void main(){float d=length(vP)/14.;vec3 c=mix(vec3(1.,.85,.2),vec3(1.,.35,.05),d);c+=n(vP+uTime*.3)*.12;gl_FragColor=vec4(c,1.-smoothstep(.7,1.,d));}`,
-  blending:THREE.AdditiveBlending,depthWrite:false,transparent:true
-});
-sunGroup.add(new THREE.Mesh(sunGeo,sunMat));
-const corGeo=new THREE.SphereGeometry(16,64,64);
-const corMat=new THREE.ShaderMaterial({
-  vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-  fragmentShader:`varying vec3 vN;void main(){float r=1.-abs(dot(vN,vec3(0.,0.,1.)));gl_FragColor=vec4(1.,.55,.1,pow(r,3.5)*.25);}`,
-  blending:THREE.AdditiveBlending,depthWrite:false,transparent:true
-});
-sunGroup.add(new THREE.Mesh(corGeo,corMat));
-const sunLight=new THREE.DirectionalLight(0xffeedd,2.5);
-sunLight.position.copy(sunGroup.position);scene.add(sunLight);
+// ── SUN ──
+const sunGroup=new THREE.Group;sunGroup.position.set(90,15,-120);scene.add(sunGroup);
+const sunMat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0}},vertexShader:`varying vec2 vUv;varying vec3 vP;void main(){vUv=uv;vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec2 vUv;varying vec3 vP;uniform float uTime;float n(vec3 p){return fract(sin(dot(p,vec3(12.9,78.2,45.5)))*43758.);}void main(){float d=length(vP)/14.;vec3 c=mix(vec3(1.,.85,.2),vec3(1.,.35,.05),d);c+=n(vP+uTime*.3)*.12;gl_FragColor=vec4(c,1.-smoothstep(.7,1.,d));}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
+sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(14,64,64),sunMat));
+const corMat=new THREE.ShaderMaterial({vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vN;void main(){float r=1.-abs(dot(vN,vec3(0.,0.,1.)));gl_FragColor=vec4(1.,.55,.1,pow(r,3.5)*.25);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
+sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(16,64,64),corMat));
+const sunLight=new THREE.DirectionalLight(0xffeedd,2.5);sunLight.position.copy(sunGroup.position);scene.add(sunLight);
 scene.add(new THREE.AmbientLight(0x112244,.4));
 
-// ═══════════════════════════════════════════
-// SPACE: EARTH GROUP
-// ═══════════════════════════════════════════
-const earthGroup=new THREE.Group();
-earthGroup.position.set(0,-80,-100);scene.add(earthGroup);
-const earthTex=loader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
-earthTex.colorSpace=THREE.SRGBColorSpace;
-const eGeo=new THREE.SphereGeometry(7,72,72);
-const eMat=new THREE.MeshStandardMaterial({map:earthTex,roughness:.6,metalness:.03});
-const earth=new THREE.Mesh(eGeo,eMat);earthGroup.add(earth);
+// ── EARTH ──
+const earthGroup=new THREE.Group;earthGroup.position.set(0,-80,-100);scene.add(earthGroup);
+const earthTex=loader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');earthTex.colorSpace=THREE.SRGBColorSpace;
+const earth=new THREE.Mesh(new THREE.SphereGeometry(7,72,72),new THREE.MeshStandardMaterial({map:earthTex,roughness:.6,metalness:.03}));earthGroup.add(earth);
+const atMat=new THREE.ShaderMaterial({vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vN;void main(){float i=pow(.7-dot(vN,vec3(0.,0.,1.)),3.5);gl_FragColor=vec4(.25,.5,1.,i*.4);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
+earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(7.2,72,72),atMat));
+const clMat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0}},vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vP;uniform float uTime;float n(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.);}float f(vec3 p){float v=0.,a=.5;vec3 s=p;for(int i=0;i<4;i++){v+=a*n(s);s*=2.;a*=.5;}return v;}void main(){float c=pow(f(vP*.8+uTime*.05),2.5);gl_FragColor=vec4(1.,1.,1.,c*.35);}`,blending:THREE.NormalBlending,depthWrite:false,transparent:true});
+const clouds=new THREE.Mesh(new THREE.SphereGeometry(7.15,64,64),clMat);earthGroup.add(clouds);
 
-// Atmosphere
-const atGeo=new THREE.SphereGeometry(7.2,72,72);
-const atMat=new THREE.ShaderMaterial({
-  vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-  fragmentShader:`varying vec3 vN;void main(){float i=pow(.7-dot(vN,vec3(0.,0.,1.)),3.5);gl_FragColor=vec4(.25,.5,1.,i*.4);}`,
-  blending:THREE.AdditiveBlending,depthWrite:false,transparent:true
-});
-earthGroup.add(new THREE.Mesh(atGeo,atMat));
-
-// Clouds
-const clGeo=new THREE.SphereGeometry(7.15,64,64);
-const clMat=new THREE.ShaderMaterial({
-  uniforms:{uTime:{value:0}},
-  vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-  fragmentShader:`varying vec3 vP;uniform float uTime;
-    float n(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.);}
-    float f(vec3 p){float v=0.,a=.5;vec3 s=p;for(int i=0;i<4;i++){v+=a*n(s);s*=2.;a*=.5;}return v;}
-    void main(){float c=pow(f(vP*.8+uTime*.05),2.5);gl_FragColor=vec4(1.,1.,1.,c*.35);}`,
-  blending:THREE.NormalBlending,depthWrite:false,transparent:true
-});
-const clouds=new THREE.Mesh(clGeo,clMat);earthGroup.add(clouds);
-
-// ═══════════════════════════════════════════
-// MOON + MARS
-// ═══════════════════════════════════════════
-const moonGroup=new THREE.Group();
-moonGroup.position.copy(earthGroup.position);scene.add(moonGroup);
+// ── MOON ──
+const moonGroup=new THREE.Group;moonGroup.position.copy(earthGroup.position);scene.add(moonGroup);
 moonGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.8,32,32),new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.85})));
 moonGroup.children[0].position.set(15,3,0);
-const orbGeo=new THREE.TorusGeometry(15,.02,16,100);
-const orbRing=new THREE.Mesh(orbGeo,new THREE.MeshBasicMaterial({color:0x334466,transparent:true,opacity:.25}));
+const orbRing=new THREE.Mesh(new THREE.TorusGeometry(15,.02,16,100),new THREE.MeshBasicMaterial({color:0x334466,transparent:true,opacity:.25}));
 orbRing.rotation.x=Math.PI*.4;moonGroup.add(orbRing);
 
+// ── MARS ──
 const mars=new THREE.Mesh(new THREE.SphereGeometry(3.5,48,48),new THREE.MeshStandardMaterial({color:0xcc4422,roughness:.75}));
 mars.position.set(-70,-45,-150);scene.add(mars);
 
-// ═══════════════════════════════════════════
-// STARS
-// ═══════════════════════════════════════════
-const sGeo=new THREE.BufferGeometry();
-const S=4000;const sP=new Float32Array(S*3);
-for(let i=0;i<S;i++){const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=200+Math.random()*200;sP[i*3]=r*Math.sin(ph)*Math.cos(th);sP[i*3+1]=r*Math.sin(ph)*Math.sin(th);sP[i*3+2]=r*Math.cos(ph);}
+// ── STARS ──
+const sGeo=new THREE.BufferGeometry;const S=4000,sP=new Float32Array(S*3);
+for(let i=0;i<S;i++){const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=200+Math.random()*200;sP[i*3]=r*Math.sin(ph)*Math.cos(th);sP[i*3+1]=r*Math.sin(ph)*Math.sin(th);sP[i*3+2]=r*Math.cos(ph)}
 sGeo.setAttribute('position',new THREE.BufferAttribute(sP,3));
 scene.add(new THREE.Points(sGeo,new THREE.PointsMaterial({size:.15,color:0xffffff,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.65})));
 
-// ═══════════════════════════════════════════
-// NEBULA
-// ═══════════════════════════════════════════
-const spaceParticles=new THREE.Group();scene.add(spaceParticles);
-const cGeo=new THREE.BufferGeometry();const C=2500,cP=new Float32Array(C*3),cC=new Float32Array(C*3);
-for(let i=0;i<C;i++){const t=Math.random()*Math.PI*2,r=Math.pow(Math.random(),2)*11,s=t+r*.4;cP[i*3]=Math.cos(s)*r+(Math.random()-.5)*r*.45;cP[i*3+1]=(Math.random()-.5)*r*.32;cP[i*3+2]=Math.sin(s)*r*.5+(Math.random()-.5)*r*.35;const col=new THREE.Color();col.setHSL(.6+r/11*.09,.88,.5+Math.random()*.42);cC[i*3]=col.r;cC[i*3+1]=col.g;cC[i*3+2]=col.b;}
+// ── NEBULA ──
+const spaceParticles=new THREE.Group;scene.add(spaceParticles);
+const cGeo=new THREE.BufferGeometry;const C=2500,cP=new Float32Array(C*3),cC=new Float32Array(C*3);
+for(let i=0;i<C;i++){const t=Math.random()*Math.PI*2,r=Math.pow(Math.random(),2)*11,s=t+r*.4;cP[i*3]=Math.cos(s)*r+(Math.random()-.5)*r*.45;cP[i*3+1]=(Math.random()-.5)*r*.32;cP[i*3+2]=Math.sin(s)*r*.5+(Math.random()-.5)*r*.35;const col=new THREE.Color;col.setHSL(.6+r/11*.09,.88,.5+Math.random()*.42);cC[i*3]=col.r;cC[i*3+1]=col.g;cC[i*3+2]=col.b}
 cGeo.setAttribute('position',new THREE.BufferAttribute(cP,3));cGeo.setAttribute('color',new THREE.BufferAttribute(cC,3));
 spaceParticles.add(new THREE.Points(cGeo,new THREE.PointsMaterial({size:.06,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.9})));
-
-const rGeo=new THREE.BufferGeometry();const R=2800,rP=new Float32Array(R*3),rC=new Float32Array(R*3);
-for(let i=0;i<R;i++){const t=Math.random()*Math.PI*2,rad=4.5+Math.random()*15;rP[i*3]=Math.cos(t)*rad;rP[i*3+1]=(Math.random()-.5)*2.4;rP[i*3+2]=Math.sin(t)*rad;const col=new THREE.Color();col.setHSL(.57+Math.random()*.16,.65,.55+Math.random()*.35);rC[i*3]=col.r;rC[i*3+1]=col.g;rC[i*3+2]=col.b;}
+const rGeo=new THREE.BufferGeometry;const R=2800,rP=new Float32Array(R*3),rC=new Float32Array(R*3);
+for(let i=0;i<R;i++){const t=Math.random()*Math.PI*2,rad=4.5+Math.random()*15;rP[i*3]=Math.cos(t)*rad;rP[i*3+1]=(Math.random()-.5)*2.4;rP[i*3+2]=Math.sin(t)*rad;const col=new THREE.Color;col.setHSL(.57+Math.random()*.16,.65,.55+Math.random()*.35);rC[i*3]=col.r;rC[i*3+1]=col.g;rC[i*3+2]=col.b}
 rGeo.setAttribute('position',new THREE.BufferAttribute(rP,3));rGeo.setAttribute('color',new THREE.BufferAttribute(rC,3));
 spaceParticles.add(new THREE.Points(rGeo,new THREE.PointsMaterial({size:.045,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.6})));
-
-const dGeo=new THREE.BufferGeometry();const D=1000,dP=new Float32Array(D*3),dC=new Float32Array(D*3);const dustData=[];
-for(let i=0;i<D;i++){const x=(Math.random()-.5)*45,y=(Math.random()-.5)*28,z=(Math.random()-.5)*40;dP[i*3]=x;dP[i*3+1]=y;dP[i*3+2]=z;dustData.push({x,y,z,vx:(Math.random()-.5)*.006,vy:(Math.random()-.5)*.006,vz:(Math.random()-.5)*.006});const col=new THREE.Color();col.setHSL(.58+Math.random()*.16,.45,.5+Math.random()*.4);dC[i*3]=col.r;dC[i*3+1]=col.g;dC[i*3+2]=col.b;}
+const dGeo=new THREE.BufferGeometry;const D=1000,dP=new Float32Array(D*3),dC=new Float32Array(D*3);const dustData=[];
+for(let i=0;i<D;i++){const x=(Math.random()-.5)*45,y=(Math.random()-.5)*28,z=(Math.random()-.5)*40;dP[i*3]=x;dP[i*3+1]=y;dP[i*3+2]=z;dustData.push({x,y,z,vx:(Math.random()-.5)*.006,vy:(Math.random()-.5)*.006,vz:(Math.random()-.5)*.006});const col=new THREE.Color;col.setHSL(.58+Math.random()*.16,.45,.5+Math.random()*.4);dC[i*3]=col.r;dC[i*3+1]=col.g;dC[i*3+2]=col.b}
 dGeo.setAttribute('position',new THREE.BufferAttribute(dP,3));dGeo.setAttribute('color',new THREE.BufferAttribute(dC,3));
 const dustPts=new THREE.Points(dGeo,new THREE.PointsMaterial({size:.035,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.45}));spaceParticles.add(dustPts);
 
 // Trail
-const trGeo=new THREE.BufferGeometry();const TR=120,trP=new Float32Array(TR*3),trL=new Float32Array(TR);
-for(let i=0;i<TR;i++){trP[i*3]=trP[i*3+1]=trP[i*3+2]=0;trL[i]=0;}
+const trGeo=new THREE.BufferGeometry;const TR=120,trP=new Float32Array(TR*3),trL=new Float32Array(TR);
+for(let i=0;i<TR;i++){trP[i*3]=trP[i*3+1]=trP[i*3+2]=0;trL[i]=0}
 trGeo.setAttribute('position',new THREE.BufferAttribute(trP,3));
-const trailPts=new THREE.Points(trGeo,new THREE.PointsMaterial({size:.09,color:new THREE.Color('#c8b0ff'),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.7}));
-scene.add(trailPts);
+const trailPts=new THREE.Points(trGeo,new THREE.PointsMaterial({size:.09,color:new THREE.Color('#c8b0ff'),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.7}));scene.add(trailPts);
 
 // ═══════════════════════════════════════════
-// 🌍 SURFACE WORLD
+// 三人坐标 & 信号系统
 // ═══════════════════════════════════════════
-const surfaceGroup=new THREE.Group();
+// Terrain-relative positions (terrain is 20x20, centered at earthGroup)
+const brothers = [
+  {name:'羿应竣',city:'山西晋中', x:2.5, z:-6.5, color:0xff6644, hex:'#ff6644'},
+  {name:'李林喆',city:'湖北荆州监利', x:3.2, z:-1.8, color:0x44aaff, hex:'#44aaff'},
+  {name:'龚铭名',city:'广州', x:4.5, z:5.2, color:0x44ff88, hex:'#44ff88'},
+];
+
+// Convergence point high in the sky
+const convLocal = new THREE.Vector3(3.5, 0, -1); // x,z center of the three, y=height
+// We'll set Y after terrain is created
+
+// ── SURFACE GROUP ──
+const surfaceGroup=new THREE.Group;
 surfaceGroup.position.copy(earthGroup.position);
-surfaceGroup.visible=false;
-scene.add(surfaceGroup);
+surfaceGroup.visible=false;scene.add(surfaceGroup);
 
 // Terrain
-const terrainSize=20,terrainSeg=150;
-const tGeo=new THREE.PlaneGeometry(terrainSize,terrainSize,terrainSeg,terrainSeg);
-tGeo.rotateX(-Math.PI/2);
+const tSize=20,tSeg=150;
+const tGeo=new THREE.PlaneGeometry(tSize,tSize,tSeg,tSeg);tGeo.rotateX(-Math.PI/2);
 const tPos=tGeo.attributes.position.array;
 const tColors=new Float32Array(tPos.length);
 for(let i=0;i<tPos.length/3;i++){
   const x=tPos[i*3],z=tPos[i*3+2];
   const h=fbm(x*.25,z*.25)*4.5+fbm(x*.6,z*.6)*1.8+fbm(x*1.5,z*1.5)*.4;
   tPos[i*3+1]=h;
-  // Color: green low, brown mid, white peaks
-  const col=new THREE.Color();
+  const col=new THREE.Color;
   if(h<1.5)col.setHSL(.25+.1*Math.random(),.7,.25+.2*Math.random());
   else if(h<3)col.setHSL(.15+.1*Math.random(),.5,.3+.2*Math.random());
   else if(h<4.2)col.setHSL(.1+.05*Math.random(),.3,.4+.3*Math.random());
   else col.setHSL(0,0,.7+.3*Math.random());
   tColors[i*3]=col.r;tColors[i*3+1]=col.g;tColors[i*3+2]=col.b;
 }
-tGeo.setAttribute('color',new THREE.BufferAttribute(tColors,3));
-tGeo.computeVertexNormals();
-const tMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.85,metalness:.02,flatShading:true});
-const terrain=new THREE.Mesh(tGeo,tMat);
+tGeo.setAttribute('color',new THREE.BufferAttribute(tColors,3));tGeo.computeVertexNormals();
+const terrain=new THREE.Mesh(tGeo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.85,metalness:.02,flatShading:true}));
 surfaceGroup.add(terrain);
 
-// Surface fog
-const surfFog=new THREE.FogExp2(0xaaccff,.008);
-surfaceGroup.add(new THREE.Mesh( // invisible anchor, fog applies to group
-  new THREE.SphereGeometry(.01),new THREE.MeshBasicMaterial({visible:false})
-));
-
-// Surface particles (fireflies)
-const ffGeo=new THREE.BufferGeometry();
-const FF=300;const ffP=new Float32Array(FF*3);const ffD=[];
-for(let i=0;i<FF;i++){
-  const x=(Math.random()-.5)*18,y=Math.random()*6,z=(Math.random()-.5)*18;
-  ffP[i*3]=x;ffP[i*3+1]=y;ffP[i*3+2]=z;
-  ffD.push({x,y,z,vx:(Math.random()-.5)*.02,vy:.01+Math.random()*.02,vz:(Math.random()-.5)*.02});
+// Calculate terrain height at each brother's position
+for(let b of brothers){
+  b.terrainY=fbm(b.x*.25,b.z*.25)*4.5+fbm(b.x*.6,b.z*.6)*1.8+fbm(b.x*1.5,b.z*1.5)*.4;
 }
-ffGeo.setAttribute('position',new THREE.BufferAttribute(ffP,3));
-const ffPts=new THREE.Points(ffGeo,new THREE.PointsMaterial({
-  size:.06,color:new THREE.Color('#ffeebb'),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.7
-}));
-surfaceGroup.add(ffPts);
 
-// Water plane
-const wGeo=new THREE.PlaneGeometry(terrainSize*2,terrainSize*2);
-wGeo.rotateX(-Math.PI/2);
-const wMat=new THREE.MeshStandardMaterial({color:0x1a4477,roughness:.2,metalness:.8,transparent:true,opacity:.7});
-const water=new THREE.Mesh(wGeo,wMat);
+// Convergence point Y = above the highest brother
+const convY=Math.max(...brothers.map(b=>b.terrainY))+14;
+convLocal.y=convY;
+
+// Surface fog
+const surfFog=new THREE.FogExp2(0x8899bb,.006);
+
+// Water
+const wGeo=new THREE.PlaneGeometry(tSize*2,tSize*2);wGeo.rotateX(-Math.PI/2);
+const water=new THREE.Mesh(wGeo,new THREE.MeshStandardMaterial({color:0x1a4477,roughness:.2,metalness:.8,transparent:true,opacity:.7}));
 water.position.y=-.3;surfaceGroup.add(water);
 
-// Surface trees (simple cones)
-for(let i=0;i<120;i++){
+// Trees
+for(let i=0;i<80;i++){
   const tx=(Math.random()-.5)*18,tz=(Math.random()-.5)*18;
   const th=fbm(tx*.25,tz*.25)*4.5+fbm(tx*.6,tz*.6)*1.8;
   if(th<1||th>4)continue;
@@ -268,29 +172,182 @@ for(let i=0;i<120;i++){
   surfaceGroup.add(trunk);surfaceGroup.add(top);
 }
 
+// ── BEACONS: Three marker pillars with light beams ──
+const beacons=[],beamLines=[],beamParticles=[];
+const beamGeo=new THREE.CylinderGeometry(.08,.08,1,8,1,true);
+
+for(let b of brothers){
+  // Ground marker - glowing pillar
+  const pillarH=1.2;
+  const pGeo=new THREE.CylinderGeometry(.15,.2,pillarH,12);
+  const pMat=new THREE.MeshStandardMaterial({color:b.color,roughness:.3,metalness:.6,emissive:b.color,emissiveIntensity:.8});
+  const pillar=new THREE.Mesh(pGeo,pMat);
+  pillar.position.set(b.x,b.terrainY+pillarH/2,b.z);
+  surfaceGroup.add(pillar);
+
+  // Glow ring at base
+  const ringGeo2=new THREE.TorusGeometry(.35,.04,8,24);
+  const ringMat2=new THREE.MeshBasicMaterial({color:b.color,transparent:true,opacity:.7});
+  const ring2=new THREE.Mesh(ringGeo2,ringMat2);
+  ring2.rotation.x=-Math.PI/2;ring2.position.set(b.x,b.terrainY+.05,b.z);
+  surfaceGroup.add(ring2);
+
+  // Light beam - cone going up toward convergence
+  const dx=convLocal.x-b.x,dz=convLocal.z-b.z,dy=convY-b.terrainY;
+  const beamLen=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  const beamCylGeo=new THREE.CylinderGeometry(.06,.06,beamLen,8,1,true);
+  const beamCylMat=new THREE.MeshBasicMaterial({color:b.color,transparent:true,opacity:.2,blending:THREE.AdditiveBlending,depthWrite:false});
+  const beamCyl=new THREE.Mesh(beamCylGeo,beamCylMat);
+  // Position at midpoint, rotate toward convergence
+  const midX=(b.x+convLocal.x)/2,midY=(b.terrainY+convY)/2,midZ=(b.z+convLocal.z)/2;
+  beamCyl.position.set(midX,midY,midZ);
+  // Orient cylinder (which is along Y) toward convergence direction
+  const dir=new THREE.Vector3(dx,dy,dz).normalize();
+  const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
+  beamCyl.setRotationFromQuaternion(q);
+  surfaceGroup.add(beamCyl);
+  beamLines.push({mesh:beamCyl,brother:b,len:beamLen});
+
+  // Name label - floating text sprite
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;
+  const ctx=canvas.getContext('2d');ctx.fillStyle=b.hex;ctx.font='bold 22px PingFang SC';ctx.textAlign='center';
+  ctx.fillText(b.name+' · '+b.city,128,32);
+  const tex=new THREE.CanvasTexture(canvas);tex.minFilter=THREE.LinearFilter;
+  const spriteMat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
+  const sprite=new THREE.Sprite(spriteMat);
+  sprite.position.set(b.x,b.terrainY+2,b.z);sprite.scale.set(3,.75,1);
+  surfaceGroup.add(sprite);
+
+  beacons.push({pillar,ring:ring2,sprite,brother:b});
+}
+
+// ── CONVERGENCE ORB ──
+// Bright glowing sphere at the convergence point (visible from space!)
+const convGeo=new THREE.SphereGeometry(.4,32,32);
+const convMat=new THREE.MeshBasicMaterial({color:0xffffff});
+const convOrb=new THREE.Mesh(convGeo,convMat);
+convOrb.position.copy(convLocal);
+surfaceGroup.add(convOrb);
+
+// Larger glow sphere
+const convGlowGeo=new THREE.SphereGeometry(1.2,32,32);
+const convGlowMat=new THREE.ShaderMaterial({
+  uniforms:{uTime:{value:0}},
+  vertexShader:`varying vec3 vN;void main(){vN=normalMatrix*normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec3 vN;uniform float uTime;void main(){float a=.3+sin(uTime*3.)*.1;gl_FragColor=vec4(1.,.85,.6,a);}`,
+  blending:THREE.AdditiveBlending,depthWrite:false,transparent:true
+});
+const convGlow=new THREE.Mesh(convGlowGeo,convGlowMat);
+convGlow.position.copy(convLocal);
+surfaceGroup.add(convGlow);
+
+// Outer glow (bigger)
+const convOuterGeo=new THREE.SphereGeometry(3,32,32);
+const convOuterMat=new THREE.ShaderMaterial({
+  uniforms:{uTime:{value:0}},
+  vertexShader:`varying vec3 vN;void main(){vN=normalMatrix*normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec3 vN;uniform float uTime;void main(){float d=length(vN);float a=.08+sin(uTime*2.5)*.04;gl_FragColor=vec4(1.,.7,.3,a);}`,
+  blending:THREE.AdditiveBlending,depthWrite:false,transparent:true
+});
+const convOuter=new THREE.Mesh(convOuterGeo,convOuterMat);
+convOuter.position.copy(convLocal);
+surfaceGroup.add(convOuter);
+
+// ── PARTICLE STREAMS toward convergence ──
+const streamParticles=[];
+for(let b of brothers){
+  const sGeo2=new THREE.BufferGeometry;
+  const SP=200;const sP2=new Float32Array(SP*3);const sData=[];
+  const dx=convLocal.x-b.x,dy=convY-b.terrainY,dz=convLocal.z-b.z;
+  const dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  const ndx=dx/dist,ndy=dy/dist,ndz=dz/dist;
+  for(let j=0;j<SP;j++){
+    const t2=Math.random();
+    const px=b.x+ndx*t2*dist+(Math.random()-.5)*.4;
+    const py=b.terrainY+ndy*t2*dist;
+    const pz=b.z+ndz*t2*dist+(Math.random()-.5)*.4;
+    sP2[j*3]=px;sP2[j*3+1]=py;sP2[j*3+2]=pz;
+    sData.push({baseX:px,baseY:py,baseZ:pz,speed:.5+Math.random()*1.5,offset:Math.random()*Math.PI*2});
+  }
+  sGeo2.setAttribute('position',new THREE.BufferAttribute(sP2,3));
+  const sPts=new THREE.Points(sGeo2,new THREE.PointsMaterial({
+    size:.07,color:new THREE.Color(b.hex),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.8
+  }));
+  surfaceGroup.add(sPts);
+  streamParticles.push({pts:sPts,data:sData,brother:b,ndx,ndy,ndz,dist,SP});
+}
+
+// ── SPACE-VISIBLE BEACON (always in scene, near Earth) ──
+const beaconGroup=new THREE.Group;
+// World position of convergence = earthGroup.position + convLocal
+beaconGroup.position.copy(earthGroup.position).add(convLocal);
+scene.add(beaconGroup);
+
+const bCoreGeo=new THREE.SphereGeometry(.5,32,32);
+const bCoreMat=new THREE.MeshBasicMaterial({color:0xffffff});
+beaconGroup.add(new THREE.Mesh(bCoreGeo,bCoreMat));
+
+const bGlowGeo=new THREE.SphereGeometry(2,32,32);
+const bGlowMat=new THREE.ShaderMaterial({
+  uniforms:{uTime:{value:0}},
+  vertexShader:`varying vec3 vN;void main(){vN=normalMatrix*normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec3 vN;uniform float uTime;void main(){float a=.4+sin(uTime*3.5)*.2+cos(uTime*5.3)*.1;gl_FragColor=vec4(1.,.8,.4,a);}`,
+  blending:THREE.AdditiveBlending,depthWrite:false,transparent:true
+});
+const bGlow=new THREE.Mesh(bGlowGeo,bGlowMat);
+beaconGroup.add(bGlow);
+
+// Large outer glow for space visibility
+const bFarGeo=new THREE.SphereGeometry(5,32,32);
+const bFarMat=new THREE.ShaderMaterial({
+  uniforms:{uTime:{value:0}},
+  vertexShader:`varying vec3 vN;void main(){vN=normalMatrix*normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec3 vN;uniform float uTime;void main(){float a=.1+sin(uTime*2.)*.05;gl_FragColor=vec4(1.,.5,.2,a);}`,
+  blending:THREE.AdditiveBlending,depthWrite:false,transparent:true
+});
+const bFar=new THREE.Mesh(bFarGeo,bFarMat);
+beaconGroup.add(bFar);
+
+// Sparkle particles around the space beacon
+const bSparkGeo=new THREE.BufferGeometry;
+const BS=100;const bSP=new Float32Array(BS*3);const bSD=[];
+for(let i=0;i<BS;i++){
+  const r=1+Math.random()*6,th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+  bSP[i*3]=r*Math.sin(ph)*Math.cos(th);bSP[i*3+1]=r*Math.sin(ph)*Math.sin(th);bSP[i*3+2]=r*Math.cos(ph);
+  bSD.push({r,th,ph,speed:.3+Math.random()*1.5,offset:Math.random()*Math.PI*2});
+}
+bSparkGeo.setAttribute('position',new THREE.BufferAttribute(bSP,3));
+const bSparks=new THREE.Points(bSparkGeo,new THREE.PointsMaterial({
+  size:.08,color:0xffcc88,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.8
+}));
+beaconGroup.add(bSparks);
+
+// ── Surface fireflies ──
+const ffGeo=new THREE.BufferGeometry;const FF=300,ffP=new Float32Array(FF*3);const ffD=[];
+for(let i=0;i<FF;i++){const x=(Math.random()-.5)*18,y=Math.random()*6,z=(Math.random()-.5)*18;ffP[i*3]=x;ffP[i*3+1]=y;ffP[i*3+2]=z;ffD.push({x,y,z,vx:(Math.random()-.5)*.02,vy:.01+Math.random()*.02,vz:(Math.random()-.5)*.02})}
+ffGeo.setAttribute('position',new THREE.BufferAttribute(ffP,3));
+const ffPts=new THREE.Points(ffGeo,new THREE.PointsMaterial({size:.06,color:new THREE.Color('#ffeebb'),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.7}));
+surfaceGroup.add(ffPts);
+
 // ═══════════════════════════════════════════
 // ANIMATE
 // ═══════════════════════════════════════════
-const clock=new THREE.Clock();
-let ti=0;const plane=new THREE.Plane(new THREE.Vector3(0,0,1),0);
-const hint=document.getElementById('hint');
-const fader=document.getElementById('fader');
+const clock=new THREE.Clock;let ti=0;const plane=new THREE.Plane(new THREE.Vector3(0,0,1),0);
+const hint=document.getElementById('hint'),fader=document.getElementById('fader');
 
 function animate(ts){
   const dt=Math.min(clock.getDelta(),.12);
+  const t=ts*.001;
   const dist=camera.position.length();
 
-  // ── Surface transition logic ──
+  // Surface transition
   const distToEarth=camera.position.distanceTo(earthGroup.position);
   const shouldBeSurface=distToEarth<10;
   const targetAlpha=shouldBeSurface?1:0;
   transitionAlpha+=(targetAlpha-transitionAlpha)*.05;
   transitionAlpha=Math.max(0,Math.min(1,transitionAlpha));
+  fader.style.opacity=transitionAlpha*.35;
 
-  // Fade screen
-  fader.style.opacity=transitionAlpha*.3;
-
-  // Toggle surface visibility
   const showSurface=transitionAlpha>.5;
   if(showSurface!==isSurfaceMode){
     isSurfaceMode=showSurface;
@@ -299,59 +356,88 @@ function animate(ts){
     spaceParticles.visible=!isSurfaceMode;
     scene.fog=isSurfaceMode?surfFog:new THREE.FogExp2(0x020210,.00006);
     controls.autoRotateSpeed=isSurfaceMode?.02:.15;
-    controls.maxPolarAngle=isSurfaceMode?Math.PI*.4:Math.PI*.75;
-    if(isSurfaceMode)controls.target.set(0,-80,0);
-    else controls.target.set(0,-80,-100);
+    if(isSurfaceMode){controls.target.set(3.5,convY-5,-1)}
+    else{controls.target.set(0,-80,-100)}
   }
 
+  // Space beacon visibility - brightest when NOT in surface mode
+  beaconGroup.visible=true;
+  const spaceBeaconAlpha=isSurfaceMode?.15:1;
+  bCoreMat.opacity=spaceBeaconAlpha;
+  bGlow.material.uniforms.uTime.value=t;
+  bFar.material.uniforms.uTime.value=t;
+
+  // Surface convergence glow
+  convGlow.material.uniforms.uTime.value=t;
+  convOuter.material.uniforms.uTime.value=t;
+
   // Hint
-  if(isSurfaceMode)hint.textContent='🌿 地表视角';
+  if(isSurfaceMode)hint.textContent='🌿 三兄弟的信号在天空汇聚';
+  else if(distToEarth<25)hint.textContent='✨ 地球上有光芒...靠近看看';
   else if(dist>120)hint.textContent='☀️ 太阳系';
-  else if(dist>50)hint.textContent='🌍 轨道视角';
-  else hint.textContent='缩小看地球 · 再缩小看太阳系';
+  else hint.textContent='那个光点是什么？缩小靠近地球';
   hint.style.opacity=Math.max(0,Math.min(1,(180-dist)/80));
 
   // Rotations
   spaceParticles.children[0].rotation.y+=dt*.055;
   spaceParticles.children[1].rotation.y-=dt*.03;spaceParticles.children[1].rotation.x+=dt*.01;
   earth.rotation.y+=dt*.05;clouds.rotation.y+=dt*.07;clouds.rotation.x+=dt*.015;
-  clouds.material.uniforms.uTime.value=ts*.001;
+  clouds.material.uniforms.uTime.value=t;
   moonGroup.rotation.z+=dt*.08;
-  sunMat.uniforms.uTime.value=ts*.001;
+  sunMat.uniforms.uTime.value=t;
   mars.rotation.y+=dt*.03;
 
   // Dust
   const dp=dustPts.geometry.attributes.position.array;
-  for(let i=0;i<D;i++){const d=dustData[i];d.x+=d.vx;d.y+=d.vy;d.z+=d.vz;if(Math.abs(d.x)>22)d.vx*=-1;if(Math.abs(d.y)>14)d.vy*=-1;if(Math.abs(d.z)>20)d.vz*=-1;dp[i*3]=d.x;dp[i*3+1]=d.y;dp[i*3+2]=d.z;}
+  for(let i=0;i<D;i++){const d=dustData[i];d.x+=d.vx;d.y+=d.vy;d.z+=d.vz;if(Math.abs(d.x)>22)d.vx*=-1;if(Math.abs(d.y)>14)d.vy*=-1;if(Math.abs(d.z)>20)d.vz*=-1;dp[i*3]=d.x;dp[i*3+1]=d.y;dp[i*3+2]=d.z}
   dustPts.geometry.attributes.position.needsUpdate=true;
 
   // Fireflies
   const fp2=ffPts.geometry.attributes.position.array;
-  for(let i=0;i<FF;i++){const f=ffD[i];f.x+=f.vx;f.y+=f.vy;f.z+=f.vz;if(Math.abs(f.x)>9)f.vx*=-1;if(f.y>6||f.y<0)f.vy*=-1;if(Math.abs(f.z)>9)f.vz*=-1;fp2[i*3]=f.x;fp2[i*3+1]=f.y;fp2[i*3+2]=f.z;}
+  for(let i=0;i<FF;i++){const f=ffD[i];f.x+=f.vx;f.y+=f.vy;f.z+=f.vz;if(Math.abs(f.x)>9)f.vx*=-1;if(f.y>6||f.y<0)f.vy*=-1;if(Math.abs(f.z)>9)f.vz*=-1;fp2[i*3]=f.x;fp2[i*3+1]=f.y;fp2[i*3+2]=f.z}
   ffPts.geometry.attributes.position.needsUpdate=true;
 
-  // Trail
-  raycaster.setFromCamera(mouse,camera);
-  const hit=new THREE.Vector3();
-  raycaster.ray.intersectPlane(plane,hit);
-  if(hit&&Math.random()<.5){
-    const tp=trailPts.geometry.attributes.position.array;
-    const i=ti%TR;tp[i*3]=hit.x+(Math.random()-.5)*.2;tp[i*3+1]=hit.y+(Math.random()-.5)*.2;tp[i*3+2]=(Math.random()-.5)*.1;trL[i]=1;ti++;
+  // Animate stream particles (flow upward toward convergence)
+  for(let s of streamParticles){
+    const sp=s.pts.geometry.attributes.position.array;
+    for(let i=0;i<s.SP;i++){
+      const d=s.data[i];
+      d.offset+=dt*d.speed;
+      const progress=((d.offset% (s.dist*2))/s.dist);
+      const px=s.brother.x+s.ndx*progress*s.dist+(Math.sin(d.offset*.7)*.3);
+      const py=s.brother.terrainY+s.ndy*progress*s.dist;
+      const pz=s.brother.z+s.ndz*progress*s.dist+(Math.cos(d.offset*.7)*.3);
+      sp[i*3]=px;sp[i*3+1]=py;sp[i*3+2]=pz;
+    }
+    s.pts.geometry.attributes.position.needsUpdate=true;
   }
+
+  // Beacon sparkles rotate
+  const bsp=bSparks.geometry.attributes.position.array;
+  for(let i=0;i<BS;i++){
+    const d=bSD[i];d.th+=dt*d.speed*.5;d.r+=Math.sin(d.th*3)*dt*.3;
+    const r=Math.max(.5,Math.min(7,d.r));
+    bsp[i*3]=r*Math.sin(d.ph)*Math.cos(d.th);bsp[i*3+1]=r*Math.sin(d.ph)*Math.sin(d.th);bsp[i*3+2]=r*Math.cos(d.ph);
+  }
+  bSparks.geometry.attributes.position.needsUpdate=true;
+  beaconGroup.rotation.y+=dt*.15;
+
+  // Pulse the beacon glow based on distance
+  const beaconPulse=1+Math.sin(t*3.5)*.3+Math.cos(t*5.7)*.2;
+  bGlow.scale.setScalar(beaconPulse);
+  bFar.scale.setScalar(beaconPulse*1.3);
+
+  // Trail
+  raycaster.setFromCamera(mouse,camera);const hit=new THREE.Vector3;raycaster.ray.intersectPlane(plane,hit);
+  if(hit&&Math.random()<.5){const tp=trailPts.geometry.attributes.position.array;const i=ti%TR;tp[i*3]=hit.x+(Math.random()-.5)*.2;tp[i*3+1]=hit.y+(Math.random()-.5)*.2;tp[i*3+2]=(Math.random()-.5)*.1;trL[i]=1;ti++}
   const tp2=trailPts.geometry.attributes.position.array;
-  for(let i=0;i<TR;i++){trL[i]-=dt*1.4;if(trL[i]<=0){tp2[i*3]=tp2[i*3+1]=tp2[i*3+2]=0;trL[i]=0;}}
+  for(let i=0;i<TR;i++){trL[i]-=dt*1.4;if(trL[i]<=0){tp2[i*3]=tp2[i*3+1]=tp2[i*3+2]=0;trL[i]=0}}
   trailPts.geometry.attributes.position.needsUpdate=true;
 
-  controls.update();
-  composer.render();
+  controls.update();composer.render();
   requestAnimationFrame(animate);
 }
-
-window.addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);
-});
-
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight)});
 animate();
 </script>
 </body>
