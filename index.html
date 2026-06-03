@@ -36,7 +36,7 @@ bloom.threshold=.06;bloom.strength=1.4;bloom.radius=.65;composer.addPass(bloom);
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;controls.dampingFactor=.06;controls.autoRotate=true;controls.autoRotateSpeed=.15;
 controls.minDistance=1.5;controls.maxDistance=300;controls.maxPolarAngle=Math.PI*.75;
-controls.target.set(0,-80,-100);controls.update();
+controls.target.set(0,-40,-60);controls.update();
 const mouse=new THREE.Vector2,raycaster=new THREE.Raycaster;
 window.addEventListener('mousemove',e=>{mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1});
 const loader=new THREE.TextureLoader;
@@ -58,23 +58,23 @@ const sunLight=new THREE.DirectionalLight(0xffeedd,2.5);sunLight.position.copy(s
 scene.add(new THREE.AmbientLight(0x112244,.4));
 
 // ── EARTH ──
-const earthGroup=new THREE.Group;earthGroup.position.set(0,-80,-100);scene.add(earthGroup);
-const earthTex=loader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');earthTex.colorSpace=THREE.SRGBColorSpace;
-const earth=new THREE.Mesh(new THREE.SphereGeometry(7,72,72),new THREE.MeshStandardMaterial({map:earthTex,roughness:.6,metalness:.03}));earthGroup.add(earth);
-const atMat=new THREE.ShaderMaterial({vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vN;void main(){float i=pow(.7-dot(vN,vec3(0.,0.,1.)),3.5);gl_FragColor=vec4(.3,.55,1.,i*.5);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
-earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(7.2,72,72),atMat));
-const clMat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0}},vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vP;uniform float uTime;float n(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.);}float f(vec3 p){float v=0.,a=.5;vec3 s=p;for(int i=0;i<4;i++){v+=a*n(s);s*=2.;a*=.5;}return v;}void main(){float c=pow(f(vP*.8+uTime*.05),2.5);gl_FragColor=vec4(1.,1.,1.,c*.35);}`,blending:THREE.NormalBlending,depthWrite:false,transparent:true});
-const clouds=new THREE.Mesh(new THREE.SphereGeometry(7.15,64,64),clMat);earthGroup.add(clouds);
+const earthGroup=new THREE.Group;earthGroup.position.set(0,-40,-60);scene.add(earthGroup);
+const earthTex=loader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');earthTex.colorSpace=THREE.SRGBColorSpace;
+const earth=new THREE.Mesh(new THREE.SphereGeometry(9,72,72),new THREE.MeshStandardMaterial({map:earthTex,roughness:.6,metalness:.03}));earthGroup.add(earth);
+const atMat=new THREE.ShaderMaterial({vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vN;void main(){float rim=1.-abs(dot(vN,vec3(0.,0.,1.)));float a=pow(rim,5.)*.35;gl_FragColor=vec4(.35,.6,1.,a);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
+earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(9.25,72,72),atMat));
+const clMat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0}},vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vP;uniform float uTime;float n(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.);}float f(vec3 p){float v=0.,a=.5;vec3 s=p;for(int i=0;i<4;i++){v+=a*n(s);s*=2.;a*=.5;}return v;}void main(){float c=pow(f(vP*.8+uTime*.05),2.5);gl_FragColor=vec4(1.,1.,1.,c*.18);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
+const clouds=new THREE.Mesh(new THREE.SphereGeometry(9.18,64,64),clMat);earthGroup.add(clouds);
 
 // ── MOON ──
 const moonGroup=new THREE.Group;moonGroup.position.copy(earthGroup.position);scene.add(moonGroup);
 moonGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.8,32,32),new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.85})));
-moonGroup.children[0].position.set(15,3,0);
+moonGroup.children[0].position.set(19,4,0);
 // moon orbit ring removed for clarity
 
 // ── MARS ──
 const mars=new THREE.Mesh(new THREE.SphereGeometry(3.5,48,48),new THREE.MeshStandardMaterial({color:0xcc4422,roughness:.75}));
-mars.position.set(-70,-45,-150);scene.add(mars);
+mars.position.set(-60,-30,-120);scene.add(mars);
 
 // ── STARS ──
 const sGeo=new THREE.BufferGeometry;const S=4000,sP=new Float32Array(S*3);
@@ -119,7 +119,7 @@ const convLocal = new THREE.Vector3(3.5, 0, -1); // x,z center of the three, y=h
 
 // ── SURFACE GROUP ──
 const surfaceGroup=new THREE.Group;
-surfaceGroup.position.copy(earthGroup.position);
+surfaceGroup.position.copy(earthGroup.position);;
 surfaceGroup.visible=false;scene.add(surfaceGroup);
 
 // Terrain
@@ -341,7 +341,7 @@ function animate(ts){
 
   // Surface transition
   const distToEarth=camera.position.distanceTo(earthGroup.position);
-  const shouldBeSurface=distToEarth<14;
+  const shouldBeSurface=distToEarth<15;
   const targetAlpha=shouldBeSurface?1:0;
   transitionAlpha+=(targetAlpha-transitionAlpha)*.03;
   transitionAlpha=Math.max(0,Math.min(1,transitionAlpha));
@@ -356,7 +356,7 @@ function animate(ts){
     scene.fog=isSurfaceMode?surfFog:new THREE.FogExp2(0x020210,.00006);
     controls.autoRotateSpeed=isSurfaceMode?.02:.15;
     if(isSurfaceMode){controls.target.set(3.5,convY-5,-1)}
-    else{controls.target.set(0,-80,-100)}
+    else{controls.target.set(0,-40,-60)}
   }
 
   // Space beacon visibility - brightest when NOT in surface mode
