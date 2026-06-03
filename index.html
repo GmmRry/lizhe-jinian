@@ -3,73 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>李林喆 · 星河</title>
+<title>·</title>
 <style>
-  :root{--bg:#050510}
   *{margin:0;padding:0;box-sizing:border-box}
-  body{
-    background:var(--bg);overflow:hidden;
-    font-family:'PingFang SC','Noto Sans SC','Inter',-apple-system,sans-serif;
-    -webkit-font-smoothing:antialiased;
-    cursor:crosshair;
-  }
+  body{background:#020210;overflow:hidden;cursor:none}
   canvas{display:block;position:fixed;top:0;left:0}
-
-  .overlay{
+  .vignette{
     position:fixed;inset:0;z-index:2;pointer-events:none;
-    background:radial-gradient(ellipse at 50% 50%,transparent 0%,rgba(5,5,16,.4) 65%,rgba(5,5,16,.82) 100%);
-  }
-
-  .type-wrap{
-    position:fixed;bottom:13vh;left:50%;transform:translateX(-50%);z-index:3;
-    text-align:center;pointer-events:none;
-  }
-  .type-sub{
-    font-size:clamp(.7rem,1.2vw,.85rem);letter-spacing:.35em;
-    color:rgba(180,200,255,.4);margin-bottom:14px;text-transform:uppercase;
-    animation:fadeUp 1.8s cubic-bezier(.16,1,.3,1) .5s both;
-  }
-  .type-name{
-    font-size:clamp(3.5rem,10vw,9rem);font-weight:200;letter-spacing:.08em;line-height:1;
-    background:linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(180,200,255,.7) 45%,rgba(120,150,255,.35) 100%);
-    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-    background-clip:text;
-    animation:fadeUp 1.8s cubic-bezier(.16,1,.3,1) .7s both;
-  }
-  .type-line{
-    display:block;width:1px;height:56px;margin:24px auto;
-    background:linear-gradient(180deg,rgba(255,255,255,0),rgba(180,200,255,.45),rgba(255,255,255,0));
-    animation:fadeUp 1.8s cubic-bezier(.16,1,.3,1) .9s both;
-  }
-  .type-tag{
-    font-size:clamp(.7rem,1vw,.8rem);letter-spacing:.25em;
-    color:rgba(180,200,255,.25);
-    animation:fadeUp 1.8s cubic-bezier(.16,1,.3,1) 1.1s both;
-  }
-  .hint{
-    position:fixed;bottom:32px;right:36px;z-index:3;pointer-events:none;
-    font-size:.6rem;letter-spacing:.22em;color:rgba(255,255,255,.1);
-    animation:fadeUp 1.8s cubic-bezier(.16,1,.3,1) 2s both;
-  }
-
-  @keyframes fadeUp{
-    from{opacity:0;transform:translateY(36px);filter:blur(8px)}
-    to{opacity:1;transform:translateY(0);filter:blur(0)}
+    box-shadow:inset 0 0 280px 60px rgba(2,2,16,.9);
   }
 </style>
 </head>
 <body>
-
-<div class="overlay"></div>
-
-<div class="type-wrap">
-  <p class="type-sub">Class of 2026 · Nebula</p>
-  <h1 class="type-name">李林喆</h1>
-  <span class="type-line"></span>
-  <p class="type-tag">万物皆星尘 · 你亦如是</p>
-</div>
-
-<div class="hint">拖拽旋转 · 滚轮缩放 · 移动触发光迹</div>
+<div class="vignette"></div>
 
 <script type="importmap">
 {
@@ -86,40 +32,54 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 
+// ── Scene ──
 const scene = new THREE.Scene();
 
-const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, .1, 200);
-camera.position.set(0, 0, 28);
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, .1, 200);
+camera.position.set(0, 0, 32);
 
-const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
+const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.3;
 document.body.appendChild(renderer.domElement);
 
+// ── Post Processing ──
 const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(
-  new THREE.Vector2(innerWidth, innerHeight), .85, .4, .2
-);
-bloom.threshold = .1;
-bloom.strength = 1.25;
-bloom.radius = .6;
+const renderPass = new RenderPass(scene, camera);
+composer.addPass(renderPass);
+
+// Bloom
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.9,.4,.15);
+bloom.threshold = .08;
+bloom.strength = 1.4;
+bloom.radius = .7;
 composer.addPass(bloom);
 
+// Depth of Field (Bokeh)
+const bokeh = new BokehPass(scene, camera, {
+  focus: 15,
+  aperture: .0004,
+  maxblur: .015,
+});
+composer.addPass(bokeh);
+
+// ── Controls ──
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.dampingFactor = .06;
+controls.dampingFactor = .05;
 controls.autoRotate = true;
-controls.autoRotateSpeed = .22;
-controls.minDistance = 7;
-controls.maxDistance = 55;
-controls.maxPolarAngle = Math.PI * .75;
+controls.autoRotateSpeed = .18;
+controls.minDistance = 6;
+controls.maxDistance = 60;
+controls.maxPolarAngle = Math.PI * .78;
 controls.target.set(0, 0, 0);
 controls.update();
 
+// ── Mouse ──
 const mouse = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 window.addEventListener('mousemove', e => {
@@ -127,170 +87,175 @@ window.addEventListener('mousemove', e => {
   mouse.y = -(e.clientY / innerHeight) * 2 + 1;
 });
 
-// ── Galaxy Core ──
+// ── Deep Field Nebula ──
+// Layer 1: Dense Hot Core (in focus)
 const coreGeo = new THREE.BufferGeometry();
-const CORE = 2000;
-const corePos = new Float32Array(CORE * 3);
-const coreCol = new Float32Array(CORE * 3);
-
-for(let i=0; i<CORE; i++){
-  const t = Math.random() * Math.PI * 2;
-  const r = Math.pow(Math.random(), 1.9) * 13;
-  const spiral = t + r * .38;
-  const x = Math.cos(spiral) * r + (Math.random()-.5) * r * .55;
-  const y = (Math.random()-.5) * r * .42;
-  const z = Math.sin(spiral) * r * .55 + (Math.random()-.5) * r * .38;
-
-  corePos[i*3] = x;
-  corePos[i*3+1] = y;
-  corePos[i*3+2] = z;
-
-  const col = new THREE.Color();
-  col.setHSL(.62 + (r/13)*.08, .85, .5 + Math.random()*.4);
-  coreCol[i*3]=col.r; coreCol[i*3+1]=col.g; coreCol[i*3+2]=col.b;
+const L1 = 2200;
+const p1 = new Float32Array(L1*3); const c1 = new Float32Array(L1*3);
+for(let i=0;i<L1;i++){
+  const t=Math.random()*Math.PI*2;
+  const r=Math.pow(Math.random(),2.2)*10;
+  const s=t+r*.42;
+  p1[i*3]=Math.cos(s)*r+(Math.random()-.5)*r*.4;
+  p1[i*3+1]=(Math.random()-.5)*r*.35;
+  p1[i*3+2]=Math.sin(s)*r*.45+(Math.random()-.5)*r*.3;
+  const col=new THREE.Color();col.setHSL(.6+(r/10)*.1,.9,.55+Math.random()*.4);
+  c1[i*3]=col.r;c1[i*3+1]=col.g;c1[i*3+2]=col.b;
 }
-
-coreGeo.setAttribute('position', new THREE.BufferAttribute(corePos, 3));
-coreGeo.setAttribute('color', new THREE.BufferAttribute(coreCol, 3));
-const coreMat = new THREE.PointsMaterial({
-  size:.07, vertexColors:true, blending:THREE.AdditiveBlending,
-  depthWrite:false, transparent:true, opacity:.88,
-});
-const core = new THREE.Points(coreGeo, coreMat);
+coreGeo.setAttribute('position',new THREE.BufferAttribute(p1,3));
+coreGeo.setAttribute('color',new THREE.BufferAttribute(c1,3));
+const core=new THREE.Points(coreGeo,new THREE.PointsMaterial({
+  size:.06,vertexColors:true,blending:THREE.AdditiveBlending,
+  depthWrite:false,transparent:true,opacity:.9
+}));
 scene.add(core);
 
-// ── Outer Halo ──
-const haloGeo = new THREE.BufferGeometry();
-const HALO = 2400;
-const haloPos = new Float32Array(HALO * 3);
-const haloCol = new Float32Array(HALO * 3);
-
-for(let i=0; i<HALO; i++){
-  const angle = Math.random() * Math.PI * 2;
-  const radius = 5.5 + Math.random() * 17;
-  const y = (Math.random() - .5) * 2.8;
-  haloPos[i*3] = Math.cos(angle) * radius;
-  haloPos[i*3+1] = y;
-  haloPos[i*3+2] = Math.sin(angle) * radius;
-  const col = new THREE.Color();
-  col.setHSL(.57 + Math.random()*.16, .65, .55 + Math.random()*.35);
-  haloCol[i*3]=col.r; haloCol[i*3+1]=col.g; haloCol[i*3+2]=col.b;
+// Layer 2: Warm Mid Ring
+const midGeo = new THREE.BufferGeometry();
+const L2=2800;
+const p2=new Float32Array(L2*3);const c2=new Float32Array(L2*3);
+for(let i=0;i<L2;i++){
+  const t=Math.random()*Math.PI*2;
+  const r=5+Math.random()*14;
+  const y=(Math.random()-.5)*2.2;
+  p2[i*3]=Math.cos(t)*r;p2[i*3+1]=y;p2[i*3+2]=Math.sin(t)*r;
+  const col=new THREE.Color();col.setHSL(.58+Math.random()*.14,.7,.55+Math.random()*.35);
+  c2[i*3]=col.r;c2[i*3+1]=col.g;c2[i*3+2]=col.b;
 }
+midGeo.setAttribute('position',new THREE.BufferAttribute(p2,3));
+midGeo.setAttribute('color',new THREE.BufferAttribute(c2,3));
+const midRing=new THREE.Points(midGeo,new THREE.PointsMaterial({
+  size:.045,vertexColors:true,blending:THREE.AdditiveBlending,
+  depthWrite:false,transparent:true,opacity:.6
+}));
+scene.add(midRing);
 
-haloGeo.setAttribute('position', new THREE.BufferAttribute(haloPos, 3));
-haloGeo.setAttribute('color', new THREE.BufferAttribute(haloCol, 3));
-const haloMat = new THREE.PointsMaterial({
-  size:.045, vertexColors:true, blending:THREE.AdditiveBlending,
-  depthWrite:false, transparent:true, opacity:.65,
-});
-const halo = new THREE.Points(haloGeo, haloMat);
-scene.add(halo);
-
-// ── Ambient Dust ──
-const dustGeo = new THREE.BufferGeometry();
-const DUST = 900;
-const dustPos = new Float32Array(DUST * 3);
-const dustCol = new Float32Array(DUST * 3);
-const dustData = [];
-
-for(let i=0; i<DUST; i++){
-  const x = (Math.random()-.5) * 42;
-  const y = (Math.random()-.5) * 26;
-  const z = (Math.random()-.5) * 38;
-  dustPos[i*3]=x; dustPos[i*3+1]=y; dustPos[i*3+2]=z;
-  dustData.push({x,y,z,vx:(Math.random()-.5)*.007,vy:(Math.random()-.5)*.007,vz:(Math.random()-.5)*.007});
-  const col = new THREE.Color();
-  col.setHSL(.58+Math.random()*.16,.45,.5+Math.random()*.4);
-  dustCol[i*3]=col.r; dustCol[i*3+1]=col.g; dustCol[i*3+2]=col.b;
+// Layer 3: Outer Cool Filaments (subject to DOF blur)
+const outGeo=new THREE.BufferGeometry();
+const L3=3200;
+const p3=new Float32Array(L3*3);const c3=new Float32Array(L3*3);
+for(let i=0;i<L3;i++){
+  const t=Math.random()*Math.PI*2;
+  const r=14+Math.random()*20;
+  const y=(Math.random()-.5)*3.5;
+  p3[i*3]=Math.cos(t)*r+(Math.random()-.5)*3;
+  p3[i*3+1]=y+(Math.random()-.5)*2;
+  p3[i*3+2]=Math.sin(t)*r+(Math.random()-.5)*3;
+  const col=new THREE.Color();col.setHSL(.62+Math.random()*.12,.55,.45+Math.random()*.4);
+  c3[i*3]=col.r;c3[i*3+1]=col.g;c3[i*3+2]=col.b;
 }
+outGeo.setAttribute('position',new THREE.BufferAttribute(p3,3));
+outGeo.setAttribute('color',new THREE.BufferAttribute(c3,3));
+const outRing=new THREE.Points(outGeo,new THREE.PointsMaterial({
+  size:.04,vertexColors:true,blending:THREE.AdditiveBlending,
+  depthWrite:false,transparent:true,opacity:.5
+}));
+scene.add(outRing);
 
-dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
-dustGeo.setAttribute('color', new THREE.BufferAttribute(dustCol, 3));
-const dustMat = new THREE.PointsMaterial({
-  size:.035, vertexColors:true, blending:THREE.AdditiveBlending,
-  depthWrite:false, transparent:true, opacity:.45,
-});
-const dust = new THREE.Points(dustGeo, dustMat);
-scene.add(dust);
-
-// ── Mouse Trail Sparkles ──
-const sparkGeo = new THREE.BufferGeometry();
-const SPARK = 100;
-const sparkPos = new Float32Array(SPARK * 3);
-const sparkLife = new Float32Array(SPARK);
-
-for(let i=0; i<SPARK; i++){
-  sparkPos[i*3]=sparkPos[i*3+1]=sparkPos[i*3+2]=0;
-  sparkLife[i]=0;
+// Layer 4: Deep Background Dust (heavily blurred by DOF)
+const deepGeo=new THREE.BufferGeometry();
+const L4=2000;
+const p4=new Float32Array(L4*3);const c4=new Float32Array(L4*3);const d4=[];
+for(let i=0;i<L4;i++){
+  const x=(Math.random()-.5)*55,y=(Math.random()-.5)*35,z=(Math.random()-.5)*45;
+  p4[i*3]=x;p4[i*3+1]=y;p4[i*3+2]=z;
+  d4.push({x,y,z,vx:(Math.random()-.5)*.006,vy:(Math.random()-.5)*.006,vz:(Math.random()-.5)*.006});
+  const col=new THREE.Color();col.setHSL(.56+Math.random()*.18,.4,.45+Math.random()*.35);
+  c4[i*3]=col.r;c4[i*3+1]=col.g;c4[i*3+2]=col.b;
 }
+deepGeo.setAttribute('position',new THREE.BufferAttribute(p4,3));
+deepGeo.setAttribute('color',new THREE.BufferAttribute(c4,3));
+const deepDust=new THREE.Points(deepGeo,new THREE.PointsMaterial({
+  size:.03,vertexColors:true,blending:THREE.AdditiveBlending,
+  depthWrite:false,transparent:true,opacity:.35
+}));
+scene.add(deepDust);
 
-sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
-const sparkMat = new THREE.PointsMaterial({
-  size:.09, color:new THREE.Color('#c8b8ff'), blending:THREE.AdditiveBlending,
-  depthWrite:false, transparent:true, opacity:.75,
-});
-const sparks = new THREE.Points(sparkGeo, sparkMat);
-scene.add(sparks);
+// ── Mouse Trail ──
+const trailGeo=new THREE.BufferGeometry();
+const TRAIL=120;
+const tPos=new Float32Array(TRAIL*3);const tLife=new Float32Array(TRAIL);
+for(let i=0;i<TRAIL;i++){tPos[i*3]=tPos[i*3+1]=tPos[i*3+2]=0;tLife[i]=0;}
+trailGeo.setAttribute('position',new THREE.BufferAttribute(tPos,3));
+const trail=new THREE.Points(trailGeo,new THREE.PointsMaterial({
+  size:.1,color:new THREE.Color('#c8b0ff'),blending:THREE.AdditiveBlending,
+  depthWrite:false,transparent:true,opacity:.7
+}));
+scene.add(trail);
 
-// ── Animation ──
-const clock = new THREE.Clock();
-let sparkIdx = 0;
-const plane = new THREE.Plane(new THREE.Vector3(0,0,1), 0);
+// ── Geometry accent ring (subtle wireframe) ──
+const ringGeo2=new THREE.TorusGeometry(8,.015,32,120);
+const ringMat2=new THREE.MeshBasicMaterial({color:0x3a3070,transparent:true,opacity:.16});
+const accentRing=new THREE.Mesh(ringGeo2,ringMat2);
+accentRing.rotation.x=Math.PI*.42;
+scene.add(accentRing);
+
+const ringGeo3=new THREE.TorusGeometry(12,.01,32,140);
+const ringMat3=new THREE.MeshBasicMaterial({color:0x2a2560,transparent:true,opacity:.1});
+const accentRing2=new THREE.Mesh(ringGeo3,ringMat3);
+accentRing2.rotation.x=Math.PI*.55;accentRing2.rotation.y=Math.PI*.3;
+scene.add(accentRing2);
+
+// ── Animate ──
+const clock=new THREE.Clock();
+let trailIdx=0;
+const plane=new THREE.Plane(new THREE.Vector3(0,0,1),0);
 
 function animate(){
-  const dt = Math.min(clock.getDelta(), .12);
+  const dt=Math.min(clock.getDelta(),.12);
 
-  core.rotation.y += dt * .055;
-  halo.rotation.y -= dt * .028;
-  halo.rotation.x += dt * .012;
+  // Rotate particle layers at different speeds for parallax
+  core.rotation.y+=dt*.06;
+  midRing.rotation.y-=dt*.035;
+  outRing.rotation.y+=dt*.022;
+  outRing.rotation.x+=dt*.008;
+  accentRing.rotation.z+=dt*.012;
+  accentRing2.rotation.z-=dt*.008;
 
-  // Float dust
-  const dp = dust.geometry.attributes.position.array;
-  for(let i=0; i<DUST; i++){
-    const d = dustData[i];
-    d.x += d.vx; d.y += d.vy; d.z += d.vz;
-    if(Math.abs(d.x)>21) d.vx*=-1;
-    if(Math.abs(d.y)>13) d.vy*=-1;
-    if(Math.abs(d.z)>19) d.vz*=-1;
-    dp[i*3]=d.x; dp[i*3+1]=d.y; dp[i*3+2]=d.z;
+  // Float deep dust
+  const dp=deepDust.geometry.attributes.position.array;
+  for(let i=0;i<L4;i++){
+    const d=d4[i];d.x+=d.vx;d.y+=d.vy;d.z+=d.vz;
+    if(Math.abs(d.x)>27)d.vx*=-1;
+    if(Math.abs(d.y)>17)d.vy*=-1;
+    if(Math.abs(d.z)>22)d.vz*=-1;
+    dp[i*3]=d.x;dp[i*3+1]=d.y;dp[i*3+2]=d.z;
   }
-  dust.geometry.attributes.position.needsUpdate = true;
+  deepDust.geometry.attributes.position.needsUpdate=true;
 
-  // Cursor intersection sparks
-  raycaster.setFromCamera(mouse, camera);
-  const hit = new THREE.Vector3();
-  raycaster.ray.intersectPlane(plane, hit);
-
-  if(hit && Math.random()<.65){
-    const sp = sparkGeo.attributes.position.array;
-    const i = sparkIdx % SPARK;
-    sp[i*3] = hit.x + (Math.random()-.5)*.25;
-    sp[i*3+1] = hit.y + (Math.random()-.5)*.25;
-    sp[i*3+2] = (Math.random()-.5)*.15;
-    sparkLife[i] = 1;
-    sparkIdx++;
+  // Cursor trail
+  raycaster.setFromCamera(mouse,camera);
+  const hit=new THREE.Vector3();
+  raycaster.ray.intersectPlane(plane,hit);
+  if(hit&&Math.random()<.55){
+    const tp=trail.geometry.attributes.position.array;
+    const i=trailIdx%TRAIL;
+    tp[i*3]=hit.x+(Math.random()-.5)*.2;
+    tp[i*3+1]=hit.y+(Math.random()-.5)*.2;
+    tp[i*3+2]=(Math.random()-.5)*.1;
+    tLife[i]=1;
+    trailIdx++;
   }
-
-  const sp2 = sparkGeo.attributes.position.array;
-  for(let i=0; i<SPARK; i++){
-    sparkLife[i] -= dt * 1.5;
-    if(sparkLife[i]<=0){
-      sp2[i*3]=sp2[i*3+1]=sp2[i*3+2]=0;
-      sparkLife[i]=0;
-    }
+  const tp2=trail.geometry.attributes.position.array;
+  for(let i=0;i<TRAIL;i++){
+    tLife[i]-=dt*1.4;
+    if(tLife[i]<=0){tp2[i*3]=tp2[i*3+1]=tp2[i*3+2]=0;tLife[i]=0;}
   }
-  sparkGeo.attributes.position.needsUpdate = true;
+  trail.geometry.attributes.position.needsUpdate=true;
+
+  // Animate Bokeh focus subtly
+  bokeh.focus=18+Math.sin(performance.now()*.0003)*4;
 
   controls.update();
   composer.render();
   requestAnimationFrame(animate);
 }
 
-window.addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
+window.addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-  composer.setSize(innerWidth, innerHeight);
+  renderer.setSize(innerWidth,innerHeight);
+  composer.setSize(innerWidth,innerHeight);
 });
 
 animate();
