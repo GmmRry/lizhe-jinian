@@ -252,6 +252,28 @@
   </div>
 </section>
 
+
+<section class="sec">
+  <div class="stitle">💬 留言板</div>
+  <div style="max-width:600px;margin:0 auto">
+    <script src="https://giscus.app/client.js"
+        data-repo="GmmRry/lizhe-jinian"
+        data-repo-id="R_kgDOSvhfNA"
+        data-category="General"
+        data-category-id="DIC_kwDOSvhfNM4C-ZCZ"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="light"
+        data-lang="zh-CN"
+        crossorigin="anonymous"
+        async>
+    </script>
+  </div>
+</section>
+
 <div class="foot">
   <div style="font-size:1.8rem;margin-bottom:8px;">🏫</div>
   李林喆 · 最好的三年 · 2026
@@ -335,10 +357,12 @@ const voteOptions=[
   {emoji:'💀',label:'300-349 LLZ你完了',range:'300-349'},
   {emoji:'🤡',label:'300以下 建议复读',range:'<300'},
 ];
-let votes={};let myVote=localStorage.getItem('lz_vote_choice')||'';
+	const VOTE_API='https://jsonblob.com/api/jsonBlob/019e8b5b-5244-7674-887b-ad15ecf8b646';
+	const MSG_API='https://jsonblob.com/api/jsonBlob/019e8b5b-707c-7da3-ba3f-fca7a5ca7204';
+	let votes={};let myVote=localStorage.getItem('lz_vote_choice')||'';
 
 async function loadVotes(){
-  try{const r=await fetch('/api/votes');votes=await r.json();}catch(e){}
+  try{const r=await fetch(VOTE_API);if(r.ok)votes=await r.json();}catch(e){}
   if(!votes||Object.keys(votes).length===0){voteOptions.forEach(v=>votes[v.range]=0);}
   renderVotes();
 }
@@ -359,10 +383,11 @@ function renderVotes(){
 async function doVote(range){
   if(myVote){alert('你投过了：'+voteOptions.find(v=>v.range===myVote)?.label);return;}
   myVote=range;localStorage.setItem('lz_vote_choice',range);
-  await fetch('/api/votes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({range})});
+	    const r=await fetch(VOTE_API);if(r.ok){votes=await r.json();votes[range]=(votes[range]||0)+1;}
+  await fetch(VOTE_API,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(votes)});
   await loadVotes();
 }
-loadVotes();setInterval(loadVotes,10000);
+loadVotes();setInterval(loadVotes,8000);
 
 // ─── Wish wall ───
 const defaults=[
@@ -375,14 +400,16 @@ const defaults=[
 ];
 let all=[...defaults];
 async function loadMsgs(){
-  try{const r=await fetch('/api/messages');const s=await r.json();all=[...defaults,...s];}catch(e){}
+  try{const r=await fetch(MSG_API);const s=await r.json();all=s;}catch(e){}
+	  if(!all||all.length===0)all=[...defaults];
   renderWall();
 }
 async function addWish(){
   const n=document.getElementById('wn').value.trim()||'过路人';
   const m=document.getElementById('wm').value.trim();if(!m)return;
   const msg={name:n,msg:m,time:new Date().toLocaleString('zh-CN')};
-  await fetch('/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(msg)});
+	  all.push(msg);
+  await fetch(MSG_API,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(all)});
   document.getElementById('wn').value='';document.getElementById('wm').value='';
   await loadMsgs();createPopup();
   document.querySelector('.wcard:last-child')?.scrollIntoView({behavior:'smooth'});
