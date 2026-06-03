@@ -55,7 +55,7 @@ document.body.appendChild(renderer.domElement);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight), 0.9, 0.4, 0.1);
-bloomPass.threshold = 0.05; bloomPass.strength = 1.6; bloomPass.radius = 0.7;
+bloomPass.threshold = 0.02; bloomPass.strength = 2.2; bloomPass.radius = 0.85;
 composer.addPass(bloomPass);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -134,26 +134,36 @@ function makeNebula(count, innerR, outerR, spreadY, hue, hueRange, sat, light, l
   return g;
 }
 
-const l1 = new THREE.Points(makeNebula(3000, 10, 18, 3.5, 0.58, 0.12, 0.85, 0.5, 0.4),
+const l1 = new THREE.Points(makeNebula(6000, 10, 20, 4, 0.58, 0.12, 0.85, 0.5, 0.4),
   new THREE.PointsMaterial({size:0.08, vertexColors:true, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.92}));
 nebulaGroup.add(l1);
 
-const l2 = new THREE.Points(makeNebula(4000, 3, 22, 3, 0.56, 0.16, 0.65, 0.5, 0.4),
+const l2 = new THREE.Points(makeNebula(8000, 2, 25, 3.5, 0.56, 0.16, 0.65, 0.5, 0.4),
   new THREE.PointsMaterial({size:0.055, vertexColors:true, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.7}));
 nebulaGroup.add(l2);
 
-const l3 = new THREE.Points(makeNebula(2500, 0, 60, 35, 0.55, 0.2, 0.4, 0.35, 0.45),
+const l3 = new THREE.Points(makeNebula(5000, 0, 70, 40, 0.55, 0.2, 0.4, 0.35, 0.45),
   new THREE.PointsMaterial({size:0.045, vertexColors:true, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.45}));
 nebulaGroup.add(l3);
 
 // Stars
 const starsGeo = new THREE.BufferGeometry();
-const ST = 5000, sp = new Float32Array(ST*3);
+const ST = 8000, sp = new Float32Array(ST*3);
 for(let i=0; i<ST; i++){
   const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1), r=180+Math.random()*220;
   sp[i*3]=r*Math.sin(ph)*Math.cos(th); sp[i*3+1]=r*Math.sin(ph)*Math.sin(th); sp[i*3+2]=r*Math.cos(ph);
 }
 starsGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+// Large bright orbs scattered through nebula for drama
+for(let io=0; io<40; io++){
+  const a=Math.random()*Math.PI*2, r=8+Math.random()*25, y=(Math.random()-.5)*8;
+  const orbGeo=new THREE.SphereGeometry(.15+Math.random()*.5, 8, 8);
+  const orbMat=new THREE.MeshBasicMaterial({color:new THREE.Color().setHSL(.55+Math.random()*.2,.8,.6+Math.random()*.4),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.7+Math.random()*.3});
+  const orb=new THREE.Mesh(orbGeo,orbMat);
+  orb.position.set(Math.cos(a)*r, y, Math.sin(a)*r);
+  orb.userData={r, a, y, speed:.02+Math.random()*.05};
+  nebulaGroup.add(orb);
+}
 nebulaGroup.add(new THREE.Points(starsGeo, new THREE.PointsMaterial({
   size:0.18, color:0xffffff, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.6
 })));
@@ -215,6 +225,16 @@ function animate(ts){
   l2.rotation.y -= dt * 0.03;
   l3.rotation.y += dt * 0.015;
   earth.rotation.y += dt * 0.04;
+  // Animate floating orbs
+  for(let c=0; c<nebulaGroup.children.length; c++){
+    const child=nebulaGroup.children[c];
+    if(child.isMesh && child.userData.r){
+      child.userData.a += dt*child.userData.speed;
+      child.userData.y += Math.sin(ts*0.001*child.userData.speed*3)*dt*.3;
+      const r2=child.userData.r, a2=child.userData.a, y2=child.userData.y;
+      child.position.set(Math.cos(a2)*r2, y2, Math.sin(a2)*r2);
+    }
+  }
   sunMat.uniforms.uTime.value = t;
   beaconGlow.material.uniforms.t.value = t;
   beaconGroup.scale.setScalar(1 + Math.sin(t * 2.5) * 0.5);
