@@ -43,13 +43,13 @@ const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x020210, 0.00003);
 
 const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.5, 600);
-camera.position.set(0, 2, 35);
+camera.position.set(0, 2, 32);
 
 const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true, powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2.5));
+renderer.setPixelRatio(devicePixelRatio);
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.3;
+renderer.toneMappingExposure = 1.45;
 document.body.appendChild(renderer.domElement);
 
 const composer = new EffectComposer(renderer);
@@ -93,15 +93,18 @@ scene.add(earthGroup);
 const earthTex = texLoader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
 earthTex.colorSpace = THREE.SRGBColorSpace;
 earthTex.anisotropy = 16;
+earthTex.minFilter = THREE.LinearMipmapLinearFilter;
+earthTex.magFilter = THREE.LinearFilter;
+earthTex.generateMipmaps = true;
 
 const earth = new THREE.Mesh(
-  new THREE.SphereGeometry(9, 96, 96),
-  new THREE.MeshPhongMaterial({map: earthTex, specular: 0x222244, shininess: 12})
+  new THREE.SphereGeometry(10, 160, 160),
+  new THREE.MeshStandardMaterial({map: earthTex, roughness: 0.7, metalness: 0.05})
 );
 earthGroup.add(earth);
 
 earthGroup.add(new THREE.Mesh(
-  new THREE.SphereGeometry(9.15, 64, 64),
+  new THREE.SphereGeometry(10.18, 80, 80),
   new THREE.MeshBasicMaterial({color: 0x4488cc, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false})
 ));
 
@@ -192,7 +195,7 @@ function animate(ts){
   const dt = Math.min(clock.getDelta(), 0.15);
   const t = ts * 0.001;
   const distToEarth = camera.position.distanceTo(earthGroup.position);
-  const target = distToEarth < 12 ? 1 : 0;
+  const target = distToEarth < 13 ? 1 : 0;
   transAlpha += (target - transAlpha) * 0.035;
   transAlpha = Math.max(0, Math.min(1, transAlpha));
   fader.style.opacity = transAlpha * 0.6;
@@ -204,8 +207,8 @@ function animate(ts){
     else { exitSurface(); }
   }
 
-  hint.textContent = isSurface ? '🗺️ 三条流星 · 汇聚于此'
-    : distToEarth < 18 ? '🔭 继续滚动缩小...进入地球...'
+  hint.textContent = isSurface ? '🗺️ 真实地图'
+    : distToEarth < 20 ? '🔭 继续滚动缩小...进入地球...'
     : '拖拽旋转 · 滚轮缩放 · 靠近蓝色光点';
 
   l1.rotation.y += dt * 0.05;
