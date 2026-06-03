@@ -2,467 +2,321 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="李林喆·记念">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
-<link rel="manifest" href="data:application/json,{'name':'李林喆·记念','short_name':'记念','start_url':'.','display':'standalone','background_color':'#a8d8ea','theme_color':'#ff7b7b'}">
-<title>李林喆 · 记念</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>李林喆</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  :root{--coral:#ff7b7b;--sun:#ffd54f;--grass:#7ec850;--sky:#87ceeb;--ink:#2c3e50;--cream:#fff9f0}
-  body{
-    font-family:'PingFang SC','Noto Sans SC','Hiragino Sans GB',sans-serif;
-    background:linear-gradient(180deg,#a8d8ea 0%,#c9e8f5 12%,#e8f4e8 40%,#f5ede0 75%,#fdf6f0 100%);
-    min-height:100vh;color:var(--ink);overflow-x:hidden;cursor:default;
-  }
-  /* Clouds */
-  .cloud{position:fixed;pointer-events:none;background:white;border-radius:50px;box-shadow:0 4px 16px rgba(0,0,0,.04);animation:drift linear infinite}
-  .cloud::before,.cloud::after{content:'';position:absolute;background:white;border-radius:50%}
-  .c1{width:120px;height:50px;top:6%;left:-140px;animation-duration:38s}
-  .c1::before{width:60px;height:60px;top:-30px;left:22px}
-  .c1::after{width:75px;height:52px;top:-18px;left:52px}
-  .c2{width:95px;height:40px;top:15%;left:-120px;animation-duration:44s;animation-delay:10s}
-  .c2::before{width:48px;height:48px;top:-24px;left:16px}
-  .c2::after{width:60px;height:42px;top:-14px;left:42px}
-  .c3{width:105px;height:44px;top:22%;left:-130px;animation-duration:41s;animation-delay:20s}
-  .c3::before{width:52px;height:52px;top:-26px;left:18px}
-  .c3::after{width:65px;height:46px;top:-16px;left:46px}
-  @keyframes drift{from{transform:translateX(0)}to{transform:translateX(calc(100vw + 300px))}}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'PingFang SC','Noto Sans SC',sans-serif;cursor:none;user-select:none;-webkit-user-select:none}
+canvas{position:fixed;top:0;left:0;z-index:0}
 
-  /* Paper planes */
-  .plane{position:fixed;pointer-events:none;font-size:1.8rem;animation:fly linear infinite}
-  .p1{top:18%;animation-duration:13s}
-  .p2{top:32%;animation-duration:16s;animation-delay:6s}
-  .p3{top:48%;animation-duration:14s;animation-delay:12s}
-  @keyframes fly{0%{left:-50px;transform:rotate(-4deg) translateY(0)}25%{transform:rotate(2deg) translateY(-35px)}50%{transform:rotate(-3deg) translateY(8px)}75%{transform:rotate(3deg) translateY(-25px)}100%{left:calc(100vw+50px);transform:rotate(0) translateY(0)}}
+/* Central text */
+.hero{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1;text-align:center;pointer-events:none}
+.hero h1{
+  font-size:clamp(3rem,8vw,7rem);font-weight:900;letter-spacing:.05em;
+  background:linear-gradient(135deg,#a78bfa,#60a5fa,#34d399,#f472b6,#fbbf24);
+  background-size:400% 400%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:shimmer 4s ease infinite;
+  margin-bottom:16px;
+}
+.hero p{font-size:clamp(.9rem,2vw,1.2rem);color:rgba(255,255,255,.35);letter-spacing:.2em}
+@keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 
-  /* Music bar */
-  .mbar{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border-radius:50px;padding:10px 20px;box-shadow:0 6px 24px rgba(0,0,0,.06);cursor:pointer;transition:.3s;border:2px solid transparent}
-  .mbar:hover{border-color:var(--coral)}
-  .mbar .mi{font-size:1.3rem}
-  .mbar .mt{font-size:.75rem;opacity:.6}
-  .mbar.paused .mi{filter:grayscale(1);opacity:.5}
-  .mbar .mw{display:flex;gap:2px;align-items:flex-end;height:18px}
-  .mbar .mw span{width:3px;background:var(--coral);border-radius:2px;animation:wave .7s ease-in-out infinite}
-  .mbar .mw span:nth-child(1){height:8px;animation-delay:0s}
-  .mbar .mw span:nth-child(2){height:14px;animation-delay:.1s}
-  .mbar .mw span:nth-child(3){height:6px;animation-delay:.2s}
-  .mbar .mw span:nth-child(4){height:12px;animation-delay:.3s}
-  .mbar.paused .mw span{animation-play-state:paused}
-  @keyframes wave{0%,100%{height:5px}50%{height:16px}}
+/* Custom cursor trail dot */
+.cursor{position:fixed;pointer-events:none;z-index:9999;width:6px;height:6px;background:white;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 20px rgba(168,139,250,.8),0 0 60px rgba(96,165,250,.4);transition:width .2s,height .2s}
+.cursor.active{width:12px;height:12px;box-shadow:0 0 30px rgba(251,191,36,.9),0 0 80px rgba(244,114,182,.6)}
 
-  /* Hero */
-  .hero{position:relative;z-index:1;min-height:85vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px}
-  .badge{display:inline-block;padding:10px 28px;background:white;border-radius:50px;font-size:.85rem;font-weight:600;color:var(--coral);letter-spacing:.2em;box-shadow:0 4px 16px rgba(255,123,123,.12);animation:pop .8s ease both}
-  .name{font-size:clamp(3rem,8vw,6rem);font-weight:900;margin:20px 0 6px;background:linear-gradient(135deg,var(--coral),#ff9a56,var(--sun),#ff6b6b);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 4s ease infinite,pop .8s ease .15s both}
-  @keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-  .sub{font-size:1.05rem;opacity:.55;letter-spacing:.12em;animation:pop .8s ease .3s both}
-
-  .cd-row{display:flex;gap:14px;margin-top:28px;animation:pop .8s ease .45s both}
-  .cd{background:white;border-radius:16px;padding:14px 10px;min-width:66px;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.04);transition:.3s}
-  .cd:hover{transform:translateY(-4px)}
-  .cd .n{font-size:1.6rem;font-weight:800;color:var(--coral);font-family:'SF Mono','Menlo',monospace}
-  .cd .l{font-size:.65rem;opacity:.35;margin-top:4px}
-
-  @keyframes pop{0%{opacity:0;transform:scale(.85) translateY(16px)}60%{transform:scale(1.04) translateY(-3px)}80%{transform:scale(.96) translateY(1px)}100%{opacity:1;transform:scale(1) translateY(0)}}
-
-  /* Sections */
-  .sec{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:30px 24px 70px}
-  .stitle{text-align:center;font-size:1.4rem;font-weight:700;margin-bottom:36px;position:relative}
-  .stitle::after{content:'';display:block;width:44px;height:3px;border-radius:3px;background:var(--coral);margin:10px auto 0}
-
-  /* ─── SCRATCH CARDS ─── */
-  .scratch-grid{display:flex;justify-content:center;gap:18px;flex-wrap:wrap}
-  .scratch{
-    width:150px;height:160px;position:relative;cursor:pointer;border-radius:20px;overflow:hidden;box-shadow:0 6px 22px rgba(0,0,0,.05);transition:.3s
-  }
-  .scratch:hover{transform:translateY(-6px);box-shadow:0 14px 36px rgba(0,0,0,.1)}
-  .scratch .s-surface{
-    position:absolute;inset:0;background:linear-gradient(135deg,#aaa,#999);
-    display:flex;align-items:center;justify-content:center;
-    color:white;font-size:.9rem;font-weight:700;letter-spacing:.1em;
-    border-radius:20px;transition:.5s ease;
-    background-image:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(255,255,255,.06) 3px,rgba(255,255,255,.06) 6px);
-  }
-  .scratch.done .s-surface{opacity:0;transform:scale(1.1);pointer-events:none}
-  .scratch .s-hide{
-    position:absolute;inset:0;background:linear-gradient(135deg,#fff5f5,#ffe0e0);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    font-size:1.6rem;font-weight:800;color:var(--coral);text-align:center;
-    border-radius:20px;border:2px dashed var(--coral);gap:4px;
-  }
-  .scratch .s-hide small{font-size:.75rem;opacity:.7}
-
-  /* ─── Vote ─── */
-  .vote-section{background:white;border-radius:24px;padding:32px;box-shadow:0 6px 24px rgba(0,0,0,.05);text-align:center;max-width:500px;margin:0 auto}
-  .vote-title{font-size:1.1rem;font-weight:700;margin-bottom:8px}
-  .vote-sub{font-size:.8rem;opacity:.5;margin-bottom:24px}
-  .vote-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
-  .vote-option{display:flex;align-items:center;gap:12px;background:#fafafa;border-radius:14px;padding:16px 20px;cursor:pointer;transition:.3s;border:2px solid transparent;text-align:left;font-family:inherit;font-size:.9rem;width:100%}
-  .vote-option:hover{border-color:#ff7b7b;background:#fff5f5}
-  .vote-option.voted{border-color:#ff7b7b;background:#fff0f0}
-  .vote-bar-wrap{flex:1;height:8px;background:#eee;border-radius:4px;overflow:hidden;min-width:60px}
-  .vote-bar-fill{height:100%;background:linear-gradient(90deg,#ff7b7b,#ff9770);border-radius:4px;transition:width .5s}
-  .vote-count{font-size:.8rem;opacity:.5;min-width:30px;text-align:right}
-  .vote-emoji{font-size:1.3rem;min-width:28px;text-align:center}
-  .prize-box{background:linear-gradient(135deg,#fff5f5,#ffe0e0);border-radius:16px;padding:20px;margin-top:20px}
-  .prize-box .big{font-size:1.6rem;margin-bottom:4px}
-  .prize-box .txt{font-size:.85rem;opacity:.7}
-  .mem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
-  .mem-card{
-    background:white;border-radius:18px;padding:26px 20px;text-align:center;
-    box-shadow:0 4px 18px rgba(0,0,0,.04);transition:.4s cubic-bezier(.16,1,.3,1);
-    cursor:pointer;position:relative;overflow:hidden;
-  }
-  .mem-card:hover{transform:translateY(-6px) rotate(-1deg);box-shadow:0 18px 44px rgba(0,0,0,.1)}
-  .mem-card .mi{font-size:2.8rem;display:block;margin-bottom:10px;transition:.4s}
-  .mem-card:hover .mi{transform:scale(1.2) rotate(5deg)}
-  .mem-card .mt{font-weight:700;font-size:.95rem;margin-bottom:4px}
-  .mem-card .md{font-size:.78rem;opacity:.45;line-height:1.6}
-  .spark{position:absolute;pointer-events:none;font-size:.7rem;animation:sparkUp 1s ease-out forwards}
-  @keyframes sparkUp{0%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(-50px) scale(0);opacity:0}}
-
-  /* ─── Barrage ─── */
-  .bmsg{position:fixed;z-index:995;pointer-events:none;white-space:nowrap;font-weight:700;font-family:'PingFang SC','Noto Sans SC',sans-serif;animation:bSlide linear forwards;text-shadow:0 2px 6px rgba(0,0,0,.12);opacity:.88}
-  @keyframes bSlide{from{right:-350px}to{right:calc(100vw+80px)}}
-
-  /* ─── Popup ─── */
-  .bpop{position:fixed;z-index:996;pointer-events:none;background:white;border-radius:22px;padding:26px 30px;box-shadow:0 20px 50px rgba(0,0,0,.12);text-align:center;animation:popIn 4s ease-in-out forwards;max-width:260px}
-  @keyframes popIn{0%{transform:scale(0) translateY(15px);opacity:0}10%{transform:scale(1.06) translateY(0);opacity:1}20%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:scale(.94) translateY(-25px)}}
-
-  /* ─── Wish wall ─── */
-  .wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:36px}
-  .wcard{background:white;border-radius:16px;padding:20px 16px;box-shadow:0 3px 14px rgba(0,0,0,.03);transition:.3s;position:relative;animation:fadeIn .5s ease both}
-  .wcard:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,0,0,.08)}
-  .wcard .wn{font-size:.75rem;color:var(--coral);font-weight:600;margin-bottom:6px}
-  .wcard .wm{font-size:.85rem;opacity:.65;line-height:1.7}
-  .wcard .wh{position:absolute;bottom:12px;right:14px;font-size:1rem;cursor:pointer;opacity:.25;transition:.3s}
-  .wcard .wh:hover{opacity:1;transform:scale(1.3)}
-  .wcard .wh.loved{opacity:1;animation:hb .5s ease}
-  @keyframes hb{0%,100%{transform:scale(1)}25%{transform:scale(1.4)}50%{transform:scale(1)}75%{transform:scale(1.2)}}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-
-  .wbox{background:white;border-radius:22px;padding:28px;box-shadow:0 6px 24px rgba(0,0,0,.04);text-align:center}
-  .wbox h3{font-size:1rem;margin-bottom:18px;font-weight:600}
-  .wrow{display:flex;gap:10px;max-width:440px;margin:0 auto}
-  .wrow input{flex:1;padding:12px 18px;border:2px solid #eee;border-radius:50px;font-size:.88rem;font-family:inherit;outline:none;transition:.3s;background:#fafafa}
-  .wrow input:focus{border-color:var(--coral);background:white}
-  .wrow button{padding:12px 28px;background:linear-gradient(135deg,var(--coral),#ff9770);border:none;border-radius:50px;color:white;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;transition:.3s}
-  .wrow button:hover{transform:scale(1.03);box-shadow:0 8px 22px rgba(255,123,123,.28)}
-
-  .foot{position:relative;z-index:1;text-align:center;padding:50px 20px 100px;opacity:.35;font-size:.8rem;letter-spacing:.08em}
-
-  @media(max-width:600px){
-    .scratch-grid{gap:12px}
-    .scratch{width:120px;height:130px}
-    .cd{padding:10px 6px;min-width:52px}
-    .cd .n{font-size:1.2rem}
-    .mem-grid{grid-template-columns:1fr 1fr}
-    .wrow{flex-direction:column}
-    .wgrid{grid-template-columns:1fr 1fr}
-    .mbar{bottom:14px;right:14px;padding:8px 14px}
-    .mbar .mt{display:none}
-  }
+/* Bottom hint */
+.hint{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:2;color:rgba(255,255,255,.2);font-size:.75rem;letter-spacing:.15em;pointer-events:none;animation:pulse 3s ease infinite}
+@keyframes pulse{0%,100%{opacity:.2}50%{opacity:.5}}
 </style>
 </head>
 <body>
 
-<div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
-<div class="plane p1">✈️</div><div class="plane p2">🕊️</div><div class="plane p3">📄</div>
+<canvas id="bg"></canvas>
+<div class="cursor" id="cursor"></div>
 
-<!-- Music: 原版记念 -->
-<audio id="musicAudio" src="jinian.mp3" loop preload="auto"></audio>
-
-<div class="mbar" id="mbar" onclick="toggleMusic()">
-  <span class="mi">🎵</span>
-  <span class="mt">记念 · 钢琴版 · 点我播放</span>
-  <div class="mw"><span></span><span></span><span></span><span></span></div>
+<div class="hero">
+  <h1>李林喆</h1>
+  <p>拖动鼠标 · 聚拢星河</p>
 </div>
-
-<section class="hero">
-  <div class="badge">🎓 2026 · 毕业季</div>
-  <h1 class="name">李林喆</h1>
-  <p class="sub">我只想要拉住流年 好好地说声再见</p>
-  <div class="cd-row" id="cdr">
-    <div class="cd"><div class="n" id="cd-d">--</div><div class="l">天</div></div>
-    <div class="cd"><div class="n" id="cd-h">--</div><div class="l">时</div></div>
-    <div class="cd"><div class="n" id="cd-m">--</div><div class="l">分</div></div>
-    <div class="cd"><div class="n" id="cd-s">--</div><div class="l">秒</div></div>
-  </div>
-</section>
-
-<!-- Scratch cards -->
-<section class="sec">
-  <div class="stitle">刮开有惊喜</div>
-  <div class="scratch-grid">
-    <div class="scratch" onclick="scratch(this)" data-done="0">
-      <div class="s-surface">刮一刮</div><div class="s-hide">🎓<br><small>金榜题名</small></div>
-    </div>
-    <div class="scratch" onclick="scratch(this)" data-done="0">
-      <div class="s-surface">刮一刮</div><div class="s-hide">💯<br><small>数学满分</small></div>
-    </div>
-    <div class="scratch" onclick="scratch(this)" data-done="0">
-      <div class="s-surface">刮一刮</div><div class="s-hide">🏆<br><small>考上理想大学</small></div>
-    </div>
-    <div class="scratch" onclick="scratch(this)" data-done="0">
-      <div class="s-surface">刮一刮</div><div class="s-hide">🍀<br><small>好运爆棚</small></div>
-    </div>
-    <div class="scratch" onclick="scratch(this)" data-done="0">
-      <div class="s-surface">刮一刮</div><div class="s-hide">✨<br><small>前程似锦</small></div>
-    </div>
-  </div>
-</section>
-
-<!-- Vote -->
-<section class="sec">
-  <div class="stitle">下注！猜分数</div>
-  <div class="vote-section">
-    <div class="vote-title">🎯 李林喆高考总分能考多少？</div>
-    <div class="vote-sub">猜中第一名的奖励：和 LLZ 约一晚上 ✨</div>
-    <div class="vote-grid" id="voteGrid"></div>
-    <div class="prize-box">
-      <div class="big">🏆</div>
-      <div class="txt">目前领先：<b id="voteLeader">--</b></div>
-      <div class="txt" style="margin-top:4px">🥇 猜中第一名：LLZ跟你约一晚上！随便干嘛</div>
-      <div class="txt">🥈 第二名：LLZ请你喝蜜雪冰城，4块钱柠檬水</div>
-      <div class="txt">🥉 第三名：LLZ给你写一周作业，字丑别嫌弃</div>
-      <div class="txt">😈 倒数第一：你请LLZ吃一个月食堂</div>
-      <div class="txt">💩 投300以下的：LLZ已经记住你了</div>
-    </div>
-  </div>
-</section>
-<section class="sec">
-  <div class="stitle">那些日子</div>
-  <div class="mem-grid" id="mg"></div>
-</section>
-
-<!-- Wish wall -->
-<section class="sec">
-  <div class="stitle">写在毕业前</div>
-  <div class="wgrid" id="wg"></div>
-  <div class="wbox">
-    <h3>🎐 给林喆写句话</h3>
-    <div class="wrow">
-      <input id="wn" placeholder="你谁啊" maxlength="12">
-      <input id="wm" placeholder="说点人话..." maxlength="80">
-      <button onclick="addWish()">贴上</button>
-    </div>
-  </div>
-</section>
-
-
-<section class="sec">
-  <div class="stitle">💬 留言板</div>
-  <div style="max-width:600px;margin:0 auto">
-    <script src="https://giscus.app/client.js"
-        data-repo="GmmRry/lizhe-jinian"
-        data-repo-id="R_kgDOSvhfNA"
-        data-category="General"
-        data-category-id="DIC_kwDOSvhfNM4C-ZCZ"
-        data-mapping="pathname"
-        data-strict="0"
-        data-reactions-enabled="1"
-        data-emit-metadata="0"
-        data-input-position="top"
-        data-theme="light"
-        data-lang="zh-CN"
-        crossorigin="anonymous"
-        async>
-    </script>
-  </div>
-</section>
-
-<div class="foot">
-  <div style="font-size:1.8rem;margin-bottom:8px;">🏫</div>
-  李林喆 · 最好的三年 · 2026
-</div>
+<div class="hint">移动鼠标聚集粒子 · 松开散射</div>
 
 <script>
-// ─── Countdown ───
-const exam=new Date(2026,5,7,9,0,0);
-setInterval(()=>{
-  let d=exam-new Date();
-  if(d<0){'ddhms'.split('').forEach(x=>document.getElementById('cd-'+x).textContent='0');return}
-  const dd=Math.floor(d/864e5);d-=dd*864e5;
-  const dh=Math.floor(d/36e5);d-=dh*36e5;
-  const dm=Math.floor(d/6e4);d-=dm*6e4;
-  const ds=Math.floor(d/1e3);
-  document.getElementById('cd-d').textContent=dd;
-  document.getElementById('cd-h').textContent=String(dh).padStart(2,'0');
-  document.getElementById('cd-m').textContent=String(dm).padStart(2,'0');
-  document.getElementById('cd-s').textContent=String(ds).padStart(2,'0');
-  if(dd<=0)document.querySelector('.sub').textContent='就是明天了。';
-},1000);
+// ── GPU-accelerated particle system ──
+const canvas = document.getElementById('bg');
+const ctx = canvas.getContext('2d');
+const cursorEl = document.getElementById('cursor');
 
-// ─── Music: 原版记念 ───
-let musicOn=false;
-function toggleMusic(){
-  const a=document.getElementById('musicAudio');
-  const b=document.getElementById('mbar');
-  if(musicOn){
-    a.pause();
-    b.classList.add('paused');b.querySelector('.mt').textContent='记念 · 已暂停';
-  }else{
-    a.play().catch(()=>{});
-    b.classList.remove('paused');b.querySelector('.mt').textContent='记念 · RAiNBOW 雷雨心';
+let W, H, mouseX=-999, mouseY=-999, mouseDown=false;
+const PARTICLE_COUNT = 180;
+const particles = [];
+const colors = [
+  'rgba(168,139,250,',  // purple
+  'rgba(96,165,250,',   // blue
+  'rgba(52,211,153,',   // green
+  'rgba(244,114,182,',  // pink
+  'rgba(251,191,36,',   // gold
+  'rgba(129,140,248,',  // indigo
+  'rgba(94,234,212,',   // teal
+  'rgba(253,224,71,',   // yellow
+];
+
+function resize(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Particle class
+class Particle {
+  constructor(){
+    this.reset();
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.hx = this.x; this.hy = this.y; // home position
   }
-  musicOn=!musicOn;
-}
-document.addEventListener('click',function ap(){if(!musicOn)toggleMusic();},{once:true});
+  reset(){
+    this.radius = Math.random() * 3 + 1;
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.vx = (Math.random() - .5) * .8;
+    this.vy = (Math.random() - .5) * .8;
+    this.opacity = Math.random() * .5 + .3;
+    this.twinkleSpeed = Math.random() * .02 + .005;
+    this.twinkleOffset = Math.random() * Math.PI * 2;
+    this.angle = Math.random() * Math.PI * 2;
+    this.orbitRadius = Math.random() * 200 + 50;
+    this.orbitSpeed = (Math.random() - .5) * .003;
+  }
+  update(t){
+    // Twinkling opacity
+    this.currentOpacity = this.opacity + Math.sin(t * this.twinkleSpeed + this.twinkleOffset) * .2;
 
-// ─── Scratch ───
-function scratch(card){
-  if(card.dataset.done==='1')return;
-  card.dataset.done='1';card.classList.add('done');
-  const r=card.getBoundingClientRect();
-  const cx=r.left+r.width/2,cy=r.top+r.height/2;
-  const colors=['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#cc5de8','#f06595','#ff922b','#ffd54f'];
-  for(let i=0;i<30;i++){
-    const s=document.createElement('div');
-    s.style.cssText=`position:fixed;z-index:999;pointer-events:none;left:${cx}px;top:${cy}px;width:5px;height:5px;border-radius:50%;background:${colors[Math.floor(Math.random()*colors.length)]};animation:sburst ${Math.random()*1+.5}s ease-out forwards;--dx:${(Math.random()-.5)*280}px;--dy:${(Math.random()-.5)*280}px`;
-    document.body.appendChild(s);setTimeout(()=>s.remove(),1800);
+    if (mouseDown) {
+      // Attract toward mouse
+      const dx = mouseX - this.x;
+      const dy = mouseY - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const force = Math.min(150 / (dist + 10), 3);
+      this.vx += dx / (dist + 1) * force * .15;
+      this.vy += dy / (dist + 1) * force * .15;
+      // Damping
+      this.vx *= .92;
+      this.vy *= .92;
+    } else {
+      // Float back toward home + gentle orbit
+      const dx = this.hx - this.x;
+      const dy = this.hy - this.y;
+      this.vx += dx * .001;
+      this.vy += dy * .001;
+      this.vx *= .97;
+      this.vy *= .97;
+      // Orbital drift
+      this.angle += this.orbitSpeed;
+      this.vx += Math.cos(this.angle) * .02;
+      this.vy += Math.sin(this.angle) * .02;
+    }
+
+    // Update position
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Wrap edges
+    if(this.x < -20) this.x = W + 20;
+    if(this.x > W + 20) this.x = -20;
+    if(this.y < -20) this.y = H + 20;
+    if(this.y > H + 20) this.y = -20;
+  }
+  draw(ctx){
+    const r = mouseDown ? this.radius * 1.5 : this.radius;
+    const alpha = Math.max(0, Math.min(1, this.currentOpacity));
+    // Glow
+    const glow = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r * 3);
+    glow.addColorStop(0, this.color + (alpha * .6) + ')');
+    glow.addColorStop(.5, this.color + (alpha * .15) + ')');
+    glow.addColorStop(1, this.color + '0)');
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r * 3, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+    // Core
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = this.color + alpha + ')';
+    ctx.fill();
   }
 }
-const sb=document.createElement('style');sb.textContent='@keyframes sburst{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}';document.head.appendChild(sb);
 
-// ─── Memory cards ───
-const memos=[
-  {icon:'🧱',title:'翻墙上网',desc:'你说去上厕所，其实是翻后墙去网吧。被教导主任追了半个操场，鞋都跑掉一只。'},
-  {icon:'🚫',title:'逃课打架',desc:'高二那次跟隔壁班约架，你第一个冲上去。后来在教务处写了三千字检讨，字还特别丑。'},
-  {icon:'📱',title:'课堂开黑',desc:'后排五黑从来不少你。有次手机被没收，你跟老师说"我在查单词"，老师说你拿反了。'},
-  {icon:'🍺',title:'天台喝酒',desc:'高三压力大的时候，你们几个跑去天台喝啤的。被保安发现了，你说是在复习化学。'},
-  {icon:'💤',title:'上课睡觉',desc:'你创造了连续三节课没被老师叫醒的记录。同桌说你的呼噜声有节奏感。'},
-  {icon:'📋',title:'抄作业',desc:'周一早上全班都在补作业，你抄了六个人的英语卷子。结果六个人全错在同一题。'},
-  {icon:'🏀',title:'逃晚自习打球',desc:'说去上厕所其实去操场投篮。天黑看不清球，你投进了自己队的篮筐。'},
-  {icon:'🎓',title:'毕业照',desc:'快门按下的瞬间，你突然回头喊了班主任的外号。那张照片洗出来全班人手一张。'},
-];
-document.getElementById('mg').innerHTML=memos.map((m,i)=>`
-  <div class="mem-card" style="animation:pop .6s ease ${i*.07}s both" onclick="cardSpark(event,this)">
-    <span class="mi">${m.icon}</span><div class="mt">${m.title}</div><div class="md">${m.desc}</div>
-  </div>
-`).join('');
-
-function cardSpark(e,card){
-  for(let i=0;i<8;i++){const s=document.createElement('span');s.className='spark';s.textContent=['✨','💫','⭐','🌟'][i%4];s.style.cssText=`left:${Math.random()*70+10}%;top:${Math.random()*50+10}%;animation-delay:${Math.random()*.4}s`;card.appendChild(s);setTimeout(()=>s.remove(),1100)}
+// Init particles
+for(let i=0; i<PARTICLE_COUNT; i++){
+  particles.push(new Particle());
 }
 
-// ─── Voting ───
-const voteOptions=[
-  {emoji:'🚀',label:'650+ 清北随便挑',range:'650+'},
-  {emoji:'🎯',label:'550-649 本科稳了',range:'550-649'},
-  {emoji:'💪',label:'450-549 有学上',range:'450-549'},
-  {emoji:'🤞',label:'350-449 大专也是大学',range:'350-449'},
-  {emoji:'💀',label:'300-349 LLZ你完了',range:'300-349'},
-  {emoji:'🤡',label:'300以下 建议复读',range:'<300'},
-];
-	const VOTE_API='https://jsonblob.com/api/jsonBlob/019e8b5b-5244-7674-887b-ad15ecf8b646';
-	const MSG_API='https://jsonblob.com/api/jsonBlob/019e8b5b-707c-7da3-ba3f-fca7a5ca7204';
-	let votes={};let myVote=localStorage.getItem('lz_vote_choice')||'';
+// Mouse trail particles
+const trailParticles = [];
+const MAX_TRAIL = 40;
 
-async function loadVotes(){
-  try{const r=await fetch(VOTE_API);if(r.ok)votes=await r.json();}catch(e){}
-  if(!votes||Object.keys(votes).length===0){voteOptions.forEach(v=>votes[v.range]=0);}
-  renderVotes();
+function spawnTrailParticle(x, y){
+  return {
+    x, y,
+    vx: (Math.random() - .5) * 4,
+    vy: (Math.random() - .5) * 4,
+    life: 1,
+    decay: Math.random() * .04 + .02,
+    radius: Math.random() * 2 + .5,
+    color: colors[Math.floor(Math.random() * colors.length)],
+  };
 }
-function renderVotes(){
-  const total=Object.values(votes).reduce((a,b)=>a+b,0)||1;
-  let maxR='',maxV=0;
-  document.getElementById('voteGrid').innerHTML=voteOptions.map(v=>{
-    const cnt=votes[v.range]||0;const pct=Math.round(cnt/total*100);
-    if(cnt>maxV){maxV=cnt;maxR=v.range;}
-    return `<button class="vote-option${v.range===myVote?' voted':''}" onclick="doVote('${v.range}')">
-      <span class="vote-emoji">${v.emoji}</span><span style="flex:1">${v.label}</span>
-      <span class="vote-count">${cnt}票 ${pct}%</span>
-      <span class="vote-bar-wrap"><span class="vote-bar-fill" style="width:${pct}%"></span></span>
-    </button>`;
-  }).join('');
-  if(maxV>0)document.getElementById('voteLeader').textContent=voteOptions.find(v=>v.range===maxR)?.label||'--';
-}
-async function doVote(range){
-  if(myVote){alert('你投过了：'+voteOptions.find(v=>v.range===myVote)?.label);return;}
-  myVote=range;localStorage.setItem('lz_vote_choice',range);
-	    const r=await fetch(VOTE_API);if(r.ok){votes=await r.json();votes[range]=(votes[range]||0)+1;}
-  await fetch(VOTE_API,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(votes)});
-  await loadVotes();
-}
-loadVotes();setInterval(loadVotes,8000);
 
-// ─── Wish wall ───
-const defaults=[
-  {name:'老刘',msg:'考不上来工地，缺个搬砖的。开玩笑的，好好考。'},
-  {name:'陈思雨',msg:'你借我那20块还没还，考完记得转我。考上好大学利息就免了。'},
-  {name:'孙哥',msg:'数学别空着大题，写个"解"字也给两分。初中你就这么干的。'},
-  {name:'赵小雅',msg:'其实一直觉得你挺厉害的，就是嘴太贱。毕业快乐吧。'},
-  {name:'张明远',msg:'高考完别跑，网吧通宵局我已经喊了八个人。你请客。'},
-  {name:'同桌',msg:'借我抄了一学期英语作业，就当积德了，高考肯定稳。'},
-];
-let all=[...defaults];
-async function loadMsgs(){
-  try{const r=await fetch(MSG_API);const s=await r.json();all=s;}catch(e){}
-	  if(!all||all.length===0)all=[...defaults];
-  renderWall();
-}
-async function addWish(){
-  const n=document.getElementById('wn').value.trim()||'过路人';
-  const m=document.getElementById('wm').value.trim();if(!m)return;
-  const msg={name:n,msg:m,time:new Date().toLocaleString('zh-CN')};
-	  all.push(msg);
-  await fetch(MSG_API,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(all)});
-  document.getElementById('wn').value='';document.getElementById('wm').value='';
-  await loadMsgs();createPopup();
-  document.querySelector('.wcard:last-child')?.scrollIntoView({behavior:'smooth'});
-}
-function renderWall(){
-  document.getElementById('wg').innerHTML=all.map((w,i)=>`
-    <div class="wcard" style="animation-delay:${i*.03}s">
-      <div class="wn">${esc(w.name)} ${w.time?'· '+w.time.split(' ')[1]:''}</div>
-      <div class="wm">${esc(w.msg)}</div>
-      <div class="wh" onclick="luv(event,this)">❤️</div>
-    </div>
-  `).join('');
-}
-function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function luv(e,h){e.stopPropagation();h.classList.add('loved')}
-document.getElementById('wm').addEventListener('keydown',e=>{if(e.key==='Enter')addWish()});
-loadMsgs();setInterval(loadMsgs,10000);
+// Mouse events
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  cursorEl.style.left = e.clientX + 'px';
+  cursorEl.style.top = e.clientY + 'px';
+  // Spawn trail particles
+  for(let i=0; i<2; i++){
+    trailParticles.push(spawnTrailParticle(e.clientX, e.clientY));
+    if(trailParticles.length > MAX_TRAIL) trailParticles.shift();
+  }
+});
 
-// ─── Barrage ───
-const barrages=['李林喆高考加油！！🎓','你一定行！！💪','冲啊林喆！！🚀','金榜题名！！🏆','考神附体！！🙏','全校第一！！🥇','数学满分！！💯','前程似锦！！🌈','逢考必过！！✅','我们都在！！❤️','毕业快乐！！🎉','万事胜意！！💫'];
-const bcolors=['#ff6b6b','#4d96ff','#fcc419','#cc5de8','#20c997','#ff922b','#f06595','#ffd54f','#ff8787','#74c0fc'];
-function cBarrage(){
-  const e=document.createElement('div');e.className='bmsg';
-  e.textContent=barrages[Math.floor(Math.random()*barrages.length)];
-  e.style.cssText=`top:${Math.random()*78+5}%;font-size:${Math.random()*10+14}px;color:${bcolors[Math.floor(Math.random()*bcolors.length)]};animation-duration:${Math.random()*6+8}s`;
-  document.body.appendChild(e);setTimeout(()=>e.remove(),parseFloat(e.style.animationDuration)*1000+200);
+document.addEventListener('mousedown', () => {
+  mouseDown = true;
+  cursorEl.classList.add('active');
+  // Burst particles on click
+  for(let i=0; i<15; i++){
+    const p = spawnTrailParticle(mouseX, mouseY);
+    p.vx *= 3; p.vy *= 3; p.radius *= 2;
+    trailParticles.push(p);
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  mouseDown = false;
+  cursorEl.classList.remove('active');
+  // Scatter burst
+  for(let p of particles){
+    const dx = p.x - mouseX;
+    const dy = p.y - mouseY;
+    const dist = Math.sqrt(dx*dx+dy*dy) || 1;
+    const force = 800 / (dist + 30);
+    p.vx += dx / dist * force;
+    p.vy += dy / dist * force;
+  }
+});
+
+// Touch events for mobile
+document.addEventListener('touchmove', e => {
+  e.preventDefault();
+  mouseX = e.touches[0].clientX;
+  mouseY = e.touches[0].clientY;
+  mouseDown = true;
+  cursorEl.style.left = mouseX + 'px';
+  cursorEl.style.top = mouseY + 'px';
+  cursorEl.classList.add('active');
+  for(let i=0; i<2; i++){
+    trailParticles.push(spawnTrailParticle(mouseX, mouseY));
+    if(trailParticles.length > MAX_TRAIL) trailParticles.shift();
+  }
+}, {passive: false});
+
+document.addEventListener('touchend', () => {
+  mouseDown = false;
+  cursorEl.classList.remove('active');
+});
+
+// Animation loop
+let time = 0;
+function animate(timestamp){
+  time = timestamp;
+  ctx.clearRect(0, 0, W, H);
+
+  // Update & draw main particles
+  for(let p of particles){
+    p.update(time);
+    p.draw(ctx);
+  }
+
+  // Connection lines between nearby particles
+  if(mouseDown){
+    ctx.globalAlpha = .3;
+    for(let i=0; i<particles.length; i+=2){
+      for(let j=i+2; j<particles.length; j+=2){
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        if(dist < 80){
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(255,255,255,${.06 * (1 - dist/80)})`;
+          ctx.lineWidth = .5;
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw & update trail particles
+  for(let i=trailParticles.length-1; i>=0; i--){
+    const tp = trailParticles[i];
+    tp.x += tp.vx;
+    tp.y += tp.vy;
+    tp.vx *= .95; tp.vy *= .95;
+    tp.life -= tp.decay;
+    if(tp.life <= 0){
+      trailParticles.splice(i, 1);
+      continue;
+    }
+    const alpha = tp.life * .7;
+    const glow = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, tp.radius * 4);
+    glow.addColorStop(0, tp.color + alpha + ')');
+    glow.addColorStop(1, tp.color + '0)');
+    ctx.beginPath();
+    ctx.arc(tp.x, tp.y, tp.radius * 4, 0, Math.PI*2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(tp.x, tp.y, tp.radius, 0, Math.PI*2);
+    ctx.fillStyle = tp.color + alpha + ')';
+    ctx.fill();
+  }
+
+  // Draw mouse-glow when pressed
+  if(mouseDown && mouseX > 0){
+    const g = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 50);
+    g.addColorStop(0, 'rgba(255,255,255,.15)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 50, 0, Math.PI*2);
+    ctx.fillStyle = g;
+    ctx.fill();
+  }
+
+  requestAnimationFrame(animate);
 }
-function createPopup(){
-  const msgs=[
-    {name:'老刘',msg:'考不上来工地，缺个搬砖的。'},
-    {name:'后桌',msg:'你转笔掉地上我捡了三年，考完请我喝奶茶。'},
-    {name:'隔壁班花',msg:'其实高一就想认识你了，毕业才敢说。加油呀。'},
-    {name:'食堂阿姨',msg:'小伙子考完回来给你多打一勺红烧肉！'},
-    {name:'门卫大爷',msg:'以后别翻墙了，考上大学正大光明走出去！'},
-    {name:'死党',msg:'网吧包夜已预定，考完那晚别想跑。'},
-    {name:'同桌',msg:'你睡觉流口水的样子我都拍下来了，考不好就发班级群。'},
-    {name:'班主任',msg:'你们这届是我带过最能闹的，也是最有出息的。'},
-  ];
-  const m=msgs[Math.floor(Math.random()*msgs.length)];
-  const icons=['💌','💝','🎉','🌟','💫','🎀','✨','🏆','🎯','💪','🔥','❤️'];
-  const e=document.createElement('div');e.className='bpop';
-  e.style.cssText=`left:${Math.random()*58+10}%;top:${Math.random()*50+10}%;`;
-  e.innerHTML=`<div style="font-size:2rem;margin-bottom:6px;">${icons[Math.floor(Math.random()*icons.length)]}</div><div style="font-size:.72rem;color:#ff7b7b;margin-bottom:6px;font-weight:600;">${m.name}</div><div style="font-size:.95rem;line-height:1.5;color:#2c3e50;">${m.msg}</div>`;
-  document.body.appendChild(e);setTimeout(()=>e.remove(),4200);
-}
-setInterval(()=>{if(Math.random()<.45)cBarrage()},2200);
-setInterval(()=>{if(Math.random()<.12)createPopup()},4500);
-setInterval(()=>{for(let i=0;i<16;i++)setTimeout(cBarrage,i*140);setTimeout(createPopup,600);setTimeout(createPopup,1500)},30000);
-setTimeout(()=>{for(let i=0;i<18;i++)setTimeout(cBarrage,i*150);setTimeout(createPopup,700)},1500);
-document.addEventListener('click',function(e){
-  if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON'||e.target.closest('.mbar'))return;
-  for(let i=0;i<6;i++)setTimeout(cBarrage,i*100);
-  if(Math.random()<.4)createPopup();
+
+// Handle mouse leaving/entering window
+document.addEventListener('mouseleave', () => {
+  mouseDown = false;
+  cursorEl.classList.remove('active');
+  mouseX = -999; mouseY = -999;
+});
+
+requestAnimationFrame(animate);
+
+// Keyboard: press 'R' to scatter all particles
+document.addEventListener('keydown', e => {
+  if(e.key === 'r' || e.key === 'R'){
+    for(let p of particles){
+      p.vx += (Math.random()-.5) * 20;
+      p.vy += (Math.random()-.5) * 20;
+    }
+  }
 });
 </script>
 </body>
