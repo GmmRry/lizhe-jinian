@@ -36,7 +36,7 @@ bloom.threshold=.04;bloom.strength=1.6;bloom.radius=.7;composer.addPass(bloom);
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;controls.dampingFactor=.06;controls.autoRotate=true;controls.autoRotateSpeed=.15;
 controls.minDistance=1.5;controls.maxDistance=300;controls.maxPolarAngle=Math.PI*.75;
-controls.target.set(0,-40,-60);controls.update();
+controls.target.set(0,-35,-50);controls.update();
 const mouse=new THREE.Vector2,raycaster=new THREE.Raycaster;
 window.addEventListener('mousemove',e=>{mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1});
 const loader=new THREE.TextureLoader;
@@ -56,14 +56,14 @@ const corMat=new THREE.ShaderMaterial({vertexShader:`varying vec3 vN;void main()
 sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(16,64,64),corMat));
 const sunLight=new THREE.DirectionalLight(0xffeedd,2.5);sunLight.position.copy(sunGroup.position);scene.add(sunLight);
 scene.add(new THREE.AmbientLight(0x224466,.6));
-const earthLight=new THREE.PointLight(0xffffff,1.2,40);earthLight.position.set(0,-35,-50);scene.add(earthLight);
+const earthLight=new THREE.PointLight(0xffffff,1.2,40);earthLight.position.set(0,-30,-40);scene.add(earthLight);
 
 // ── EARTH ──
-const earthGroup=new THREE.Group;earthGroup.position.set(0,-40,-60);scene.add(earthGroup);
+const earthGroup=new THREE.Group;earthGroup.position.set(0,-35,-50);scene.add(earthGroup);
 const earthTex=loader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
 earthTex.colorSpace=THREE.SRGBColorSpace;
 // Solid Earth sphere - no shader tricks
-const earthMat=new THREE.MeshPhongMaterial({map:earthTex,specular:0x333333,shininess:15});
+earthTex.anisotropy=8;const earthMat=new THREE.MeshPhongMaterial({map:earthTex,color:0x224488,specular:0x333333,shininess:15});
 const earth=new THREE.Mesh(new THREE.SphereGeometry(9,96,96),earthMat);earthGroup.add(earth);
 // Simple additive glow shell (not a ring)
 const atGeo2=new THREE.SphereGeometry(9.15,48,48);
@@ -365,7 +365,7 @@ function animate(ts){
     scene.fog=isSurfaceMode?surfFog:new THREE.FogExp2(0x020210,.00006);
     controls.autoRotateSpeed=isSurfaceMode?.02:.15;
     if(isSurfaceMode){controls.target.set(3.5,convY-5,-1)}
-    else{controls.target.set(0,-40,-60)}
+    else{controls.target.set(0,-35,-50)}
   }
 
   // Space beacon visibility - brightest when NOT in surface mode
@@ -381,7 +381,7 @@ function animate(ts){
 
   // Hint
   if(isSurfaceMode)hint.textContent='🌿 三兄弟的信号在天空汇聚';
-  else if(distToEarth<30)hint.textContent='✨ 继续缩小进入地表...';
+  else if(distToEarth<35)hint.textContent='✨ 地球上那个光点是...继续缩小...';
   else if(dist>120)hint.textContent='☀️ 太阳系';
   else hint.textContent='那个光点是什么？缩小靠近地球';
   hint.style.opacity=Math.max(0,Math.min(1,(180-dist)/80));
