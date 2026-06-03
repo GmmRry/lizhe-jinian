@@ -22,9 +22,9 @@ import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 const scene=new THREE.Scene;
-scene.fog=new THREE.FogExp2(0x000011,.00003);
+scene.fog=new THREE.FogExp2(0x000011,.000015);
 const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.5,800);
-camera.position.set(0,5,45);
+camera.position.set(0,3,38);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2.5));
 renderer.setSize(innerWidth,innerHeight);
@@ -37,7 +37,7 @@ bloom.threshold=.05;bloom.strength=1.5;bloom.radius=.7;composer.addPass(bloom);
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;controls.dampingFactor=.06;controls.autoRotate=true;controls.autoRotateSpeed=.12;
 controls.minDistance=1;controls.maxDistance=350;controls.maxPolarAngle=Math.PI*.7;
-controls.target.set(0,-35,-50);controls.update();
+controls.target.set(0,0,0);controls.update();
 const mouse=new THREE.Vector2,raycaster=new THREE.Raycaster;
 window.addEventListener('mousemove',e=>{mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1});
 
@@ -52,7 +52,7 @@ function fbm(x,y){let v=0,a=.5,f=1;for(let i=0;i<5;i++){v+=a*noise2D(x*f,y*f);f*
 // PROCEDURAL EARTH (no texture dependency)
 // ═══════════════════════════════════════════
 const earthGroup=new THREE.Group;
-earthGroup.position.set(0,-35,-50);scene.add(earthGroup);
+earthGroup.position.set(0,0,0);scene.add(earthGroup);
 const EARTH_R=9;
 
 // Generate procedural Earth surface using vertex colors
@@ -106,12 +106,12 @@ const cloudShell=new THREE.Mesh(cloudGeo,cloudMat2);earthGroup.add(cloudShell);
 
 // Earth lighting
 scene.add(new THREE.AmbientLight(0x224466,.5));
-const earthLight=new THREE.PointLight(0xffffff,1,25);earthLight.position.set(0,-30,-40);scene.add(earthLight);
+const earthLight=new THREE.PointLight(0xffffff,1,25);earthLight.position.set(5,0,20);scene.add(earthLight);
 
 // ═══════════════════════════════════════════
 // SUN (distant)
 // ═══════════════════════════════════════════
-const sunGroup=new THREE.Group;sunGroup.position.set(80,20,-120);scene.add(sunGroup);
+const sunGroup=new THREE.Group;sunGroup.position.set(100,40,-200);scene.add(sunGroup);
 const sunGeo=new THREE.SphereGeometry(12,48,48);
 const sunMat2=new THREE.ShaderMaterial({uniforms:{t:{value:0}},vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vP;uniform float t;float n(vec3 p){return fract(sin(dot(p,vec3(12.9,78.2,45.5)))*43758.);}void main(){float d=length(vP)/12.;vec3 c=mix(vec3(1.,.85,.2),vec3(1.,.3,.02),d);c+=n(vP+t*.3)*.1;gl_FragColor=vec4(c,1.-smoothstep(.65,1.,d));}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
 sunGroup.add(new THREE.Mesh(sunGeo,sunMat2));
@@ -137,7 +137,7 @@ function createNebula(count,innerR,outerR,spreadY,colors){
   g.setAttribute('color',new THREE.BufferAttribute(c,3));
   return g;
 }
-spaceP.add(new THREE.Points(createNebula(3000,0,12,3,[.58,.12,.85,.5,.4]),new THREE.PointsMaterial({size:.07,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.9})));
+spaceP.add(new THREE.Points(createNebula(3000,10,18,3,[.58,.12,.85,.5,.4]),new THREE.PointsMaterial({size:.07,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.9})));
 spaceP.add(new THREE.Points(createNebula(3500,4,18,2.5,[.56,.16,.65,.5,.4]),new THREE.PointsMaterial({size:.05,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.65})));
 spaceP.add(new THREE.Points(createNebula(2000,0,50,30,[.55,.2,.4,.4,.4]),new THREE.PointsMaterial({size:.04,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.4})));
 
@@ -244,11 +244,11 @@ convGlowMesh.position.set(convPoint.x,convPoint.y,convPoint.z);surfaceGroup.add(
 const spaceGlowGroup=new THREE.Group;
 spaceGlowGroup.position.copy(earthGroup.position).add(new THREE.Vector3(convPoint.x,convPoint.y,convPoint.z));
 scene.add(spaceGlowGroup);
-const sgGeo=new THREE.SphereGeometry(.8,16,16);
-const sgMat=new THREE.MeshBasicMaterial({color:0xaaccff,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.5});
+const sgGeo=new THREE.SphereGeometry(.15,8,8);
+const sgMat=new THREE.MeshBasicMaterial({color:0xaaccff,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.25});
 spaceGlowGroup.add(new THREE.Mesh(sgGeo,sgMat));
-const sgFarGeo=new THREE.SphereGeometry(3,16,16);
-const sgFarMat=new THREE.ShaderMaterial({uniforms:{t:{value:0}},vertexShader:`varying vec3 vN;void main(){vN=normalMatrix*normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vN;uniform float t;void main(){float a=.06+sin(t*2.)*.03;gl_FragColor=vec4(.6,.8,1.,a);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
+const sgFarGeo=new THREE.SphereGeometry(.8,16,16);
+const sgFarMat=new THREE.ShaderMaterial({uniforms:{t:{value:0}},vertexShader:`varying vec3 vN;void main(){vN=normalMatrix*normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vN;uniform float t;void main(){float a=.03+sin(t*2.)*.015;gl_FragColor=vec4(.4,.6,.9,a);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
 spaceGlowGroup.add(new THREE.Mesh(sgFarGeo,sgFarMat));
 
 // Name sprites for surface
@@ -280,7 +280,7 @@ function animate(ts){
   const distToEarth=camera.position.distanceTo(earthGroup.position);
 
   // Surface transition
-  const target=distToEarth<14?1:0;
+  const target=distToEarth<10?1:0;
   transAlpha+=(target-transAlpha)*.02;
   transAlpha=Math.max(0,Math.min(1,transAlpha));
   fader.style.opacity=transAlpha*.7; // white fade for cloud transition
@@ -294,12 +294,12 @@ function animate(ts){
     scene.fog=isSurface?surfFog:new THREE.FogExp2(0x000011,.00003);
     controls.autoRotateSpeed=isSurface?.01:.12;
     if(isSurface)controls.target.set(0,5,0);
-    else controls.target.set(0,-35,-50);
+    else controls.target.set(0,0,0);
   }
 
   // Hint
   if(isSurface)hint.textContent='🌠 三颗流星汇聚于天际';
-  else if(distToEarth<30)hint.textContent='✨ 继续缩小...';
+  else if(distToEarth<15)hint.textContent='🌠 继续缩小...';
   else if(dist>150)hint.textContent='☀️ 深空';
   else hint.textContent='拖拽旋转 · 滚轮缩放 · 靠近那个光点';
   hint.style.opacity=Math.max(0,Math.min(1,(180-dist)/80));
