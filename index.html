@@ -3,15 +3,25 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>·</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#020210;overflow:hidden;cursor:crosshair}
-canvas{display:block;position:fixed;top:0;left:0}
-.hint{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none;font-family:'PingFang SC','Noto Sans SC',sans-serif;font-size:.65rem;letter-spacing:.25em;color:rgba(255,255,255,.16);transition:all .5s}
-.fader{position:fixed;inset:0;z-index:10;pointer-events:none;background:#fff;opacity:0;transition:opacity 1s}
+canvas{display:block;position:fixed;top:0;left:0;z-index:1}
+#map{position:fixed;inset:0;z-index:5;display:none;background:#1a1a2e}
+#map.visible{display:block}
+.leaflet-container{background:#1a1a2e!important}
+.map-overlay{position:fixed;inset:0;z-index:6;pointer-events:none}
+.meteor-line{position:absolute;height:2px;background:transparent;transform-origin:0 50%;filter:blur(1px);z-index:7}
+.hint{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:10;pointer-events:none;font-family:'PingFang SC','Noto Sans SC',sans-serif;font-size:.65rem;letter-spacing:.25em;color:rgba(255,255,255,.18);transition:all .5s}
+.fader{position:fixed;inset:0;z-index:8;pointer-events:none;background:#fff;opacity:0;transition:opacity 1s}
+.marker-label{font-family:'PingFang SC','Noto Sans SC',sans-serif;font-size:12px;font-weight:700;white-space:nowrap;text-shadow:0 0 8px rgba(255,255,255,.8)}
+.convergence-pulse{position:absolute;width:20px;height:20px;border-radius:50%;background:radial-gradient(circle,#fff 0%,#aaccff 30%,transparent 70%);transform:translate(-50%,-50%);animation:cpulse 2s ease infinite;z-index:7}
+@keyframes cpulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.8}50%{transform:translate(-50%,-50%) scale(3);opacity:.2}}
 </style>
 </head>
 <body>
+<div id="map"></div>
 <div class="fader" id="fader"></div>
 <div class="hint" id="hint">拖拽旋转 · 滚轮缩放 · 靠近蓝色光点</div>
 
@@ -90,7 +100,6 @@ const earth = new THREE.Mesh(
 );
 earthGroup.add(earth);
 
-// Atmosphere shell
 earthGroup.add(new THREE.Mesh(
   new THREE.SphereGeometry(9.15, 64, 64),
   new THREE.MeshBasicMaterial({color: 0x4488cc, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false})
@@ -147,10 +156,7 @@ nebulaGroup.add(new THREE.Points(starsGeo, new THREE.PointsMaterial({
 })));
 
 // ═══ SUN ═══
-const sunGroup = new THREE.Group();
-sunGroup.position.set(100, 40, -200);
-scene.add(sunGroup);
-
+const sunGroup = new THREE.Group(); sunGroup.position.set(100, 40, -200); scene.add(sunGroup);
 const sunMat = new THREE.ShaderMaterial({
   uniforms:{uTime:{value:0}},
   vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
@@ -158,159 +164,29 @@ const sunMat = new THREE.ShaderMaterial({
   blending:THREE.AdditiveBlending, depthWrite:false, transparent:true
 });
 sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(12,48,48), sunMat));
-
-const coronaMat = new THREE.ShaderMaterial({
+sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(14,48,48), new THREE.ShaderMaterial({
   vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
   fragmentShader:`varying vec3 vN;void main(){float r=1.-abs(dot(vN,vec3(0.,0.,1.)));gl_FragColor=vec4(1.,.5,.05,pow(r,4.)*.2);}`,
   blending:THREE.AdditiveBlending, depthWrite:false, transparent:true
-});
-sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(14,48,48), coronaMat));
-
-const sunLight = new THREE.DirectionalLight(0xffeedd, 2);
-sunLight.position.copy(sunGroup.position);
-scene.add(sunLight);
+})));
+const sunLight = new THREE.DirectionalLight(0xffeedd, 2); sunLight.position.copy(sunGroup.position); scene.add(sunLight);
 
 // ═══ SPACE BEACON ═══
-const beaconGroup = new THREE.Group();
-beaconGroup.position.set(0, 4, -1);
-scene.add(beaconGroup);
-
-beaconGroup.add(new THREE.Mesh(
-  new THREE.SphereGeometry(0.2, 16, 16),
-  new THREE.MeshBasicMaterial({color:0xaaccff, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.5})
-));
-
-const beaconGlow = new THREE.Mesh(
-  new THREE.SphereGeometry(1.5, 32, 32),
-  new THREE.ShaderMaterial({
-    uniforms:{t:{value:0}},
-    vertexShader:`varying vec3 vN;void main(){vN=normalMatrix*normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-    fragmentShader:`varying vec3 vN;uniform float t;void main(){float a=0.04+sin(t*2.5)*0.02;gl_FragColor=vec4(0.5,0.7,1.,a);}`,
-    blending:THREE.AdditiveBlending, depthWrite:false, transparent:true
-  })
-);
+const beaconGroup = new THREE.Group(); beaconGroup.position.set(0, 4, -1); scene.add(beaconGroup);
+beaconGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), new THREE.MeshBasicMaterial({color:0xaaccff, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.5})));
+const beaconGlow = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.ShaderMaterial({
+  uniforms:{t:{value:0}},
+  vertexShader:`varying vec3 vN;void main(){vN=normalMatrix*normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec3 vN;uniform float t;void main(){float a=0.04+sin(t*2.5)*0.02;gl_FragColor=vec4(0.5,0.7,1.,a);}`,
+  blending:THREE.AdditiveBlending, depthWrite:false, transparent:true
+}));
 beaconGroup.add(beaconGlow);
 
-// ═══ SURFACE WORLD ═══
-const surfaceGroup = new THREE.Group();
-surfaceGroup.visible = false;
-scene.add(surfaceGroup);
-
-// Ground
-const gCanvas = document.createElement('canvas');
-gCanvas.width = gCanvas.height = 512;
-const gctx = gCanvas.getContext('2d');
-for(let i=0; i<2000; i++){
-  const x=Math.random()*512, y=Math.random()*512, h=Math.random();
-  gctx.fillStyle = h<0.6
-    ? `rgb(${30+Math.random()*30},${60+Math.random()*40},${20+Math.random()*20})`
-    : `rgb(${50+Math.random()*40},${80+Math.random()*60},${30+Math.random()*30})`;
-  gctx.fillRect(x, y, 8+Math.random()*12, 8+Math.random()*12);
-}
-for(let i=0; i<6; i++){
-  const cx=Math.random()*512, cy=Math.random()*512;
-  const grd=gctx.createRadialGradient(cx,cy,0,cx,cy,30+Math.random()*50);
-  grd.addColorStop(0, 'rgba(20,60,140,.5)'); grd.addColorStop(1, 'rgba(20,60,140,0)');
-  gctx.fillStyle=grd; gctx.fillRect(0,0,512,512);
-}
-const groundTex = new THREE.CanvasTexture(gCanvas);
-groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
-groundTex.repeat.set(4, 4);
-surfaceGroup.add(new THREE.Mesh(
-  new THREE.PlaneGeometry(30, 30).rotateX(-Math.PI/2),
-  new THREE.MeshStandardMaterial({map:groundTex, roughness:0.85, metalness:0.05})
-));
-
-// Hills
-const hillsGeo = new THREE.PlaneGeometry(30, 30, 60, 60).rotateX(-Math.PI/2);
-const hp = hillsGeo.attributes.position.array;
-for(let i=0; i<hp.length/3; i++){
-  const x=hp[i*3], z=hp[i*3+2];
-  hp[i*3+1] = Math.abs(fbm(x*0.15, z*0.15))*2.5 + Math.abs(fbm(x*0.4, z*0.4))*0.8;
-}
-hillsGeo.computeVertexNormals();
-surfaceGroup.add(new THREE.Mesh(hillsGeo, new THREE.MeshStandardMaterial({
-  color:0x2d5a1e, roughness:0.9, metalness:0, transparent:true, opacity:0.4, depthWrite:false
-})));
-
-// Trees
-for(let i=0; i<80; i++){
-  const tx=(Math.random()-0.5)*28, tz=(Math.random()-0.5)*28;
-  const th=Math.abs(fbm(tx*0.15,tz*0.15))*2.5+Math.abs(fbm(tx*0.4,tz*0.4))*0.8;
-  const trunkH=0.3+Math.random()*0.5;
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, trunkH, 5), new THREE.MeshStandardMaterial({color:0x3a2510}));
-  trunk.position.set(tx, th+trunkH/2, tz);
-  surfaceGroup.add(trunk);
-  const topH=0.3+Math.random()*0.4, topR=0.1+Math.random()*0.15;
-  const top = new THREE.Mesh(new THREE.ConeGeometry(topR, topH, 6), new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(0.15+Math.random()*0.2, 0.55, 0.15+Math.random()*0.25)}));
-  top.position.set(tx, th+trunkH+topH/2, tz);
-  surfaceGroup.add(top);
-}
-
-const surfFog = new THREE.FogExp2(0x8899bb, 0.003);
-
-// ═══ METEOR TRAILS ═══
-const brothers = [
-  {name:'羿应竣', city:'山西晋中', color:0xff5533, sx:-6, sy:10, sz:-5},
-  {name:'李林喆', city:'湖北荆州监利', color:0x33aaff, sx:0, sy:11, sz:-2},
-  {name:'龚铭名', city:'广州', color:0x22dd66, sx:5, sy:10, sz:4},
-];
-const cp = {x:0, y:4, z:-1};
-
-const meteorGroups = [];
-for(let b of brothers){
-  const mg = new THREE.Group();
-  const trailGeo = new THREE.BufferGeometry();
-  const TP = 150, tpArr = new Float32Array(TP*3), tData = [];
-  for(let j=0; j<TP; j++){
-    const prog=j/TP;
-    tpArr[j*3]=b.sx+(cp.x-b.sx)*prog;
-    tpArr[j*3+1]=b.sy+(cp.y-b.sy)*prog;
-    tpArr[j*3+2]=b.sz+(cp.z-b.sz)*prog;
-    tData.push({life:Math.random(), speed:0.3+Math.random()*0.8});
-  }
-  trailGeo.setAttribute('position', new THREE.BufferAttribute(tpArr, 3));
-  mg.add(new THREE.Points(trailGeo, new THREE.PointsMaterial({
-    size:0.08, color:new THREE.Color(b.color), blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.9
-  })));
-  mg.add(new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), new THREE.MeshBasicMaterial({color:b.color, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.8})));
-  mg.children[1].position.set(b.sx, b.sy, b.sz);
-  const canvas=document.createElement('canvas'); canvas.width=256; canvas.height=40;
-  const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#'+b.color.toString(16).padStart(6,'0');
-  ctx.font='16px PingFang SC'; ctx.textAlign='center';
-  ctx.fillText(b.name+' · '+b.city, 128, 25);
-  const tex=new THREE.CanvasTexture(canvas); tex.minFilter=THREE.LinearFilter;
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
-  sprite.position.set(b.sx, b.sy-1.5, b.sz); sprite.scale.set(3.5, 0.55, 1);
-  mg.add(sprite);
-  surfaceGroup.add(mg);
-  meteorGroups.push({group:mg, data:tData, brother:b, TP});
-}
-
-// Convergence glow
-surfaceGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshBasicMaterial({color:0xeeddff, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.9}))).position.set(cp.x, cp.y, cp.z);
-
-// Burst
-const burstGeo = new THREE.BufferGeometry();
-const BP=200, bArr=new Float32Array(BP*3), bData=[];
-for(let i=0; i<BP; i++){
-  const r=Math.random()*3, th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
-  bArr[i*3]=cp.x+r*Math.sin(ph)*Math.cos(th);
-  bArr[i*3+1]=cp.y+r*Math.sin(ph)*Math.sin(th);
-  bArr[i*3+2]=cp.z+r*Math.cos(ph);
-  bData.push({r, th, ph, speed:0.2+Math.random()*1.5});
-}
-burstGeo.setAttribute('position', new THREE.BufferAttribute(bArr, 3));
-const burstPts = new THREE.Points(burstGeo, new THREE.PointsMaterial({size:0.06, color:new THREE.Color('#eeddff'), blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.85}));
-surfaceGroup.add(burstPts);
-
-// ═══ ANIMATE ═══
+// ═══ ANIMATION LOOP ═══
 const clock = new THREE.Clock();
 const hint = document.getElementById('hint');
 const fader = document.getElementById('fader');
-let isSurface = false;
-let transAlpha = 0;
+let isSurface = false, transAlpha = 0;
 
 function animate(ts){
   const dt = Math.min(clock.getDelta(), 0.15);
@@ -324,19 +200,14 @@ function animate(ts){
   const showSurface = transAlpha > 0.55;
   if(showSurface !== isSurface){
     isSurface = showSurface;
-    surfaceGroup.visible = isSurface;
-    earthGroup.visible = !isSurface;
-    nebulaGroup.visible = !isSurface;
-    scene.fog = isSurface ? surfFog : new THREE.FogExp2(0x020210, 0.00003);
-    controls.autoRotateSpeed = isSurface ? 0.01 : 0.15;
-    controls.target.set(0, isSurface ? 4 : 0, 0);
+    if(isSurface){ enterSurface(); }
+    else { exitSurface(); }
   }
 
-  hint.textContent = isSurface ? '🌠 三颗流星 · 汇聚天际'
+  hint.textContent = isSurface ? '🗺️ 真实地图 · 三兄弟位置'
     : distToEarth < 18 ? '🔭 继续滚动缩小...进入地球...'
     : '拖拽旋转 · 滚轮缩放 · 靠近蓝色光点';
 
-  // Rotations
   l1.rotation.y += dt * 0.05;
   l2.rotation.y -= dt * 0.03;
   l3.rotation.y += dt * 0.015;
@@ -344,34 +215,6 @@ function animate(ts){
   sunMat.uniforms.uTime.value = t;
   beaconGlow.material.uniforms.t.value = t;
   beaconGroup.scale.setScalar(1 + Math.sin(t * 2.5) * 0.5);
-
-  // Meteor trails
-  for(let mt of meteorGroups){
-    const pts = mt.group.children[0];
-    const mp = pts.geometry.attributes.position.array;
-    for(let i=0; i<mt.TP; i++){
-      const d = mt.data[i];
-      d.life += dt * d.speed * 0.5;
-      if(d.life > 1) d.life -= 1;
-      const p = d.life, b = mt.brother;
-      mp[i*3] = b.sx + (cp.x - b.sx) * p + Math.sin(p*20 + d.life*5) * 0.1 * (1-p);
-      mp[i*3+1] = b.sy + (cp.y - b.sy) * p;
-      mp[i*3+2] = b.sz + (cp.z - b.sz) * p + Math.cos(p*20 + d.life*5) * 0.1 * (1-p);
-    }
-    pts.geometry.attributes.position.needsUpdate = true;
-  }
-
-  // Burst
-  const bp = burstPts.geometry.attributes.position.array;
-  for(let i=0; i<BP; i++){
-    const d = bData[i];
-    d.r += dt * d.speed * 0.3;
-    if(d.r > 3) d.r = 0.01;
-    bp[i*3] = cp.x + d.r * Math.sin(d.ph) * Math.cos(d.th);
-    bp[i*3+1] = cp.y + d.r * Math.sin(d.ph) * Math.sin(d.th);
-    bp[i*3+2] = cp.z + d.r * Math.cos(d.ph);
-  }
-  burstPts.geometry.attributes.position.needsUpdate = true;
 
   controls.update();
   composer.render();
@@ -384,6 +227,82 @@ window.addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
 });
+
+// ═══ LEAFLET MAP (loaded dynamically) ═══
+let leafletLoaded = false;
+let map = null;
+let convergenceMarker = null;
+
+function loadLeaflet(cb){
+  if(leafletLoaded){ cb(); return; }
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  script.onload = () => { leafletLoaded = true; cb(); };
+  document.head.appendChild(script);
+}
+
+function enterSurface(){
+  renderer.domElement.style.display = 'none';
+  const mapDiv = document.getElementById('map');
+  mapDiv.classList.add('visible');
+  fader.style.opacity = '0';
+
+  loadLeaflet(() => {
+    if(!map){
+      map = L.map('map', { zoomControl: false, attributionControl: false, center: [32, 112], zoom: 5, minZoom: 3, maxZoom: 12 });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+      // Disable map interaction when we want to scroll back out
+      map.scrollWheelZoom.disable();
+      map.dragging.disable();
+      map.touchZoom.disable();
+      map.doubleClickZoom.disable();
+    }
+
+    // Clear old markers
+    map.eachLayer(layer => { if(layer instanceof L.CircleMarker) map.removeLayer(layer); });
+
+    // Three brothers as glowing circle markers
+    const brothers = [
+      {name:'羿应竣', city:'山西晋中', lat:37.69, lng:112.74, color:'#ff5533'},
+      {name:'李林喆', city:'湖北荆州监利', lat:29.82, lng:112.90, color:'#33aaff'},
+      {name:'龚铭名', city:'广州', lat:23.13, lng:113.26, color:'#22dd66'},
+    ];
+
+    const points = [];
+    brothers.forEach(b => {
+      const marker = L.circleMarker([b.lat, b.lng], {
+        radius: 8, color: b.color, fillColor: b.color, fillOpacity: 0.8, weight: 3, className: 'glow-marker'
+      }).addTo(map);
+      marker.bindTooltip(`<b>${b.name}</b><br>${b.city}`, {direction:'top', className:'marker-label'});
+      points.push(marker.getLatLng());
+    });
+
+    // Convergence point (center of three)
+    const clat = (brothers[0].lat + brothers[1].lat + brothers[2].lat) / 3;
+    const clng = (brothers[0].lng + brothers[1].lng + brothers[2].lng) / 3;
+
+    // Draw meteor lines on the map using SVG overlay
+    if(convergenceMarker) map.removeLayer(convergenceMarker);
+    convergenceMarker = L.circleMarker([clat, clng], {
+      radius: 12, color: '#eeddff', fillColor: '#eeddff', fillOpacity: 0.9, weight: 0, className: 'convergence-marker'
+    }).addTo(map);
+
+    // Draw lines using Leaflet polyline
+    brothers.forEach(b => {
+      L.polyline([[b.lat, b.lng], [clat, clng]], {
+        color: b.color, weight: 2, opacity: 0.6, dashArray: '5, 10', className: 'meteor-path'
+      }).addTo(map);
+    });
+
+    map.invalidateSize();
+    setTimeout(() => map.invalidateSize(), 500);
+  });
+}
+
+function exitSurface(){
+  renderer.domElement.style.display = 'block';
+  document.getElementById('map').classList.remove('visible');
+}
 
 animate(performance.now());
 </script>
