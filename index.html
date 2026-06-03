@@ -55,16 +55,25 @@ sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(14,64,64),sunMat));
 const corMat=new THREE.ShaderMaterial({vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vN;void main(){float r=1.-abs(dot(vN,vec3(0.,0.,1.)));gl_FragColor=vec4(1.,.55,.1,pow(r,3.5)*.25);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
 sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(16,64,64),corMat));
 const sunLight=new THREE.DirectionalLight(0xffeedd,2.5);sunLight.position.copy(sunGroup.position);scene.add(sunLight);
-scene.add(new THREE.AmbientLight(0x112244,.4));
+scene.add(new THREE.AmbientLight(0x224466,.6));
+const earthLight=new THREE.PointLight(0xffffff,.8,30);earthLight.position.set(0,-35,-50);scene.add(earthLight);
 
 // ── EARTH ──
 const earthGroup=new THREE.Group;earthGroup.position.set(0,-40,-60);scene.add(earthGroup);
-const earthTex=loader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');earthTex.colorSpace=THREE.SRGBColorSpace;
-const earth=new THREE.Mesh(new THREE.SphereGeometry(9,72,72),new THREE.MeshStandardMaterial({map:earthTex,roughness:.6,metalness:.03}));earthGroup.add(earth);
-const atMat=new THREE.ShaderMaterial({vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vN;void main(){float rim=1.-abs(dot(vN,vec3(0.,0.,1.)));float a=pow(rim,5.)*.35;gl_FragColor=vec4(.35,.6,1.,a);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
-earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(9.25,72,72),atMat));
-const clMat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0}},vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vP;uniform float uTime;float n(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.);}float f(vec3 p){float v=0.,a=.5;vec3 s=p;for(int i=0;i<4;i++){v+=a*n(s);s*=2.;a*=.5;}return v;}void main(){float c=pow(f(vP*.8+uTime*.05),2.5);gl_FragColor=vec4(1.,1.,1.,c*.18);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
-const clouds=new THREE.Mesh(new THREE.SphereGeometry(9.18,64,64),clMat);earthGroup.add(clouds);
+const earthTex=loader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+earthTex.colorSpace=THREE.SRGBColorSpace;
+// Solid Earth sphere - no shader tricks
+const earthMat=new THREE.MeshPhongMaterial({map:earthTex,specular:0x111111,shininess:5});
+const earth=new THREE.Mesh(new THREE.SphereGeometry(9,72,72),earthMat);earthGroup.add(earth);
+// Simple additive glow shell (not a ring)
+const atGeo2=new THREE.SphereGeometry(9.15,64,64);
+const atMat2=new THREE.MeshBasicMaterial({color:0x4488cc,transparent:true,opacity:.08,blending:THREE.AdditiveBlending,depthWrite:false});
+earthGroup.add(new THREE.Mesh(atGeo2,atMat2));
+// Subtle white cloud shell
+const cloudShell=new THREE.Mesh(new THREE.SphereGeometry(9.2,48,48),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.06,blending:THREE.AdditiveBlending,depthWrite:false}));
+earthGroup.add(cloudShell);
+// Store cloud reference for rotation
+const clouds=cloudShell;
 
 // ── MOON ──
 const moonGroup=new THREE.Group;moonGroup.position.copy(earthGroup.position);scene.add(moonGroup);
@@ -380,8 +389,8 @@ function animate(ts){
   // Rotations
   spaceParticles.children[0].rotation.y+=dt*.055;
   spaceParticles.children[1].rotation.y-=dt*.03;spaceParticles.children[1].rotation.x+=dt*.01;
-  earth.rotation.y+=dt*.05;clouds.rotation.y+=dt*.07;clouds.rotation.x+=dt*.015;
-  clouds.material.uniforms.uTime.value=t;
+  earth.rotation.y+=dt*.05;clouds.rotation.y+=dt*.02;
+  // clouds rotation handled below
   moonGroup.rotation.z+=dt*.08;
   sunMat.uniforms.uTime.value=t;
   mars.rotation.y+=dt*.03;
