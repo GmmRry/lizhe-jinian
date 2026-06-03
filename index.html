@@ -22,7 +22,7 @@ import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 const scene=new THREE.Scene;
-scene.fog=new THREE.FogExp2(0x000011,.000015);
+scene.fog=new THREE.FogExp2(0x000011,.00002);
 const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.5,800);
 camera.position.set(0,3,38);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
@@ -56,39 +56,16 @@ earthGroup.position.set(0,0,0);scene.add(earthGroup);
 const EARTH_R=9;
 
 // Generate procedural Earth surface using vertex colors
-const eSeg=128;
-const eGeo=new THREE.SphereGeometry(EARTH_R,eSeg,eSeg);
-const ePos=eGeo.attributes.position.array;
-const eCol=new Float32Array(ePos.length);
-const landMask=[];
-
-for(let i=0;i<ePos.length/3;i++){
-  const x=ePos[i*3],y=ePos[i*3+1],z=ePos[i*3+2];
-  // Convert to lat/lon
-  const lat=Math.asin(y/EARTH_R);
-  const lon=Math.atan2(z,x);
-  // Map to 2D for noise
-  const nx=lon/Math.PI*5,ny=lat/Math.PI*5;
-  const h=fbm(nx,ny);
-  // Ocean: deep blue, Land: green to brown, Ice: white at poles
-  const absLat=Math.abs(lat);
-  const isLand=h>.55&&absLat<1.3;
-  const isIce=absLat>1.2||(h>.6&&absLat>1.0);
-  landMask.push(isLand||isIce);
-  const col=new THREE.Color;
-  if(isIce)col.setHSL(.58,.1,.7+.3*Math.random());
-  else if(isLand)col.setHSL(.15+.2*Math.random(),.5+.3*Math.random(),.3+.25*Math.random());
-  else col.setHSL(.58+.05*Math.random(),.6+.2*Math.random(),.2+.2*Math.random());
-  eCol[i*3]=col.r;eCol[i*3+1]=col.g;eCol[i*3+2]=col.b;
-}
-eGeo.setAttribute('color',new THREE.BufferAttribute(eCol,3));
-eGeo.computeVertexNormals();
-const eMat=new THREE.MeshPhongMaterial({vertexColors:true,specular:0x112233,shininess:8,flatShading:false});
+// Real Earth texture
+const eGeo=new THREE.SphereGeometry(EARTH_R,96,96);
+const earthTex=loader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+earthTex.colorSpace=THREE.SRGBColorSpace;earthTex.anisotropy=16;
+const eMat=new THREE.MeshPhongMaterial({map:earthTex,specular:0x222244,shininess:10,color:0x224488});
 const earth=new THREE.Mesh(eGeo,eMat);earthGroup.add(earth);
 
 // Atmosphere shell
 const atGeo=new THREE.SphereGeometry(EARTH_R*1.02,64,64);
-const atMat=new THREE.MeshBasicMaterial({color:0x4488cc,transparent:true,opacity:.06,blending:THREE.AdditiveBlending,depthWrite:false});
+const atMat=new THREE.MeshBasicMaterial({color:0x4488cc,transparent:true,opacity:.08,blending:THREE.AdditiveBlending,depthWrite:false});
 earthGroup.add(new THREE.Mesh(atGeo,atMat));
 
 // Cloud shell
@@ -153,38 +130,48 @@ spaceP.add(new THREE.Points(stGeo,new THREE.PointsMaterial({size:.18,color:0xfff
 const surfaceGroup=new THREE.Group;
 surfaceGroup.position.copy(earthGroup.position);surfaceGroup.visible=false;scene.add(surfaceGroup);
 
-// Ground plane
-const tSize=24,tSeg=100;
-const tGeo=new THREE.PlaneGeometry(tSize,tSize,tSeg,tSeg);tGeo.rotateX(-Math.PI/2);
-const tPos2=tGeo.attributes.position.array;
-const tCols=new Float32Array(tPos2.length);
-for(let i=0;i<tPos2.length/3;i++){
-  const x=tPos2[i*3],z=tPos2[i*3+2];
-  const h=fbm(x*.3,z*.3)*5+fbm(x*.7,z*.7)*2+fbm(x*1.8,z*1.8)*.5;
-  tPos2[i*3+1]=h;
-  const col=new THREE.Color;
-  if(h<1.5)col.setHSL(.55,.5,.15+.3*Math.random());
-  else if(h<3)col.setHSL(.2+.15*Math.random(),.5,.2+.3*Math.random());
-  else if(h<4.5)col.setHSL(.12+.1*Math.random(),.3,.3+.4*Math.random());
-  else col.setHSL(0,0,.5+.4*Math.random());
-  tCols[i*3]=col.r;tCols[i*3+1]=col.g;tCols[i*3+2]=col.b;
+// Beautiful flat ground with subtle texture
+const gSize=30;
+const gGeo=new THREE.PlaneGeometry(gSize,gSize);gGeo.rotateX(-Math.PI/2);
+const gCanvas=document.createElement('canvas');gCanvas.width=gCanvas.height=512;
+const gCtx=gCanvas.getContext('2d');
+// Paint a satellite-like ground
+for(let i=0;i<2000;i++){
+  const x=Math.random()*512,y=Math.random()*512;
+  const h=Math.random();
+  gCtx.fillStyle=h<.6?`rgb(${30+Math.random()*30},${60+Math.random()*40},${20+Math.random()*20})`:`rgb(${50+Math.random()*40},${80+Math.random()*60},${30+Math.random()*30})`;
+  gCtx.fillRect(x,y,8+Math.random()*12,8+Math.random()*12);
 }
-tGeo.setAttribute('color',new THREE.BufferAttribute(tCols,3));tGeo.computeVertexNormals();
-surfaceGroup.add(new THREE.Mesh(tGeo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.9,metalness:0,flatShading:true})));
+// Add some blue water patches
+for(let i=0;i<8;i++){
+  const cx=Math.random()*512,cy=Math.random()*512;
+  const grd=gCtx.createRadialGradient(cx,cy,0,cx,cy,30+Math.random()*50);
+  grd.addColorStop(0,'rgba(20,60,140,.6)');grd.addColorStop(1,'rgba(20,60,140,0)');
+  gCtx.fillStyle=grd;gCtx.fillRect(0,0,512,512);
+}
+const gTex=new THREE.CanvasTexture(gCanvas);gTex.wrapS=gTex.wrapT=THREE.RepeatWrapping;gTex.repeat.set(4,4);
+surfaceGroup.add(new THREE.Mesh(gGeo,new THREE.MeshStandardMaterial({map:gTex,roughness:.85,metalness:.05})));
 
-// Water
-const wGeo2=new THREE.PlaneGeometry(tSize*3,tSize*3);wGeo2.rotateX(-Math.PI/2);
-surfaceGroup.add(new THREE.Mesh(wGeo2,new THREE.MeshStandardMaterial({color:0x112244,roughness:.15,metalness:.7,transparent:true,opacity:.75})));
+// Subtle rolling hills
+const hGeo=new THREE.PlaneGeometry(gSize,gSize,60,60);hGeo.rotateX(-Math.PI/2);
+const hPos=hGeo.attributes.position.array;
+for(let i=0;i<hPos.length/3;i++){
+  const x=hPos[i*3],z=hPos[i*3+2];
+  hPos[i*3+1]=Math.abs(fbm(x*.15,z*.15))*2.5+Math.abs(fbm(x*.4,z*.4))*.8;
+}
+hGeo.computeVertexNormals();
+surfaceGroup.add(new THREE.Mesh(hGeo,new THREE.MeshStandardMaterial({color:0x335522,roughness:.95,metalness:0,transparent:true,opacity:.35,depthWrite:false})));
 
-// Trees
-for(let i=0;i<60;i++){
-  const tx=(Math.random()-.5)*22,tz=(Math.random()-.5)*22;
-  const th=fbm(tx*.3,tz*.3)*5+fbm(tx*.7,tz*.7)*2;
-  if(th<1||th>4.5)continue;
-  surfaceGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(.04,.06,.35,5),new THREE.MeshStandardMaterial({color:0x4a2a0a})));
-  surfaceGroup.children[surfaceGroup.children.length-1].position.set(tx,th+.18,tz);
-  surfaceGroup.add(new THREE.Mesh(new THREE.ConeGeometry(.15,.4,5),new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(.2+Math.random()*.2,.6,.2+Math.random()*.3)})));
-  surfaceGroup.children[surfaceGroup.children.length-1].position.set(tx,th+.55,tz);
+// Scattered trees
+for(let i=0;i<100;i++){
+  const tx=(Math.random()-.5)*28,tz=(Math.random()-.5)*28;
+  const th=Math.abs(fbm(tx*.15,tz*.15))*2.5+Math.abs(fbm(tx*.4,tz*.4))*.8;
+  const trunkH=.3+Math.random()*.5;
+  surfaceGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(.03,.05,trunkH,5),new THREE.MeshStandardMaterial({color:0x3a2510})));
+  surfaceGroup.children[surfaceGroup.children.length-1].position.set(tx,th+trunkH/2,tz);
+  const topH=.3+Math.random()*.4,topR=.1+Math.random()*.15;
+  surfaceGroup.add(new THREE.Mesh(new THREE.ConeGeometry(topR,topH,6),new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(.15+Math.random()*.2,.55,.15+Math.random()*.25)})));
+  surfaceGroup.children[surfaceGroup.children.length-1].position.set(tx,th+trunkH+topH/2,tz);
 }
 
 // Surface fog
@@ -230,7 +217,7 @@ for(let i=0;i<BP;i++){
   bD.push({r,th,ph,rr:r,speed:.2+Math.random()*1.5});
 }
 burstGeo.setAttribute('position',new THREE.BufferAttribute(bP,3));
-const burstPts=new THREE.Points(burstGeo,new THREE.PointsMaterial({size:.06,color:new THREE.Color('#ffddaa'),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.85}));
+const burstPts=new THREE.Points(burstGeo,new THREE.PointsMaterial({size:.06,color:new THREE.Color('#eeddff'),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.85}));
 surfaceGroup.add(burstPts);
 
 // Subtle convergence glow (not orange beacon)
@@ -280,7 +267,7 @@ function animate(ts){
   const distToEarth=camera.position.distanceTo(earthGroup.position);
 
   // Surface transition
-  const target=distToEarth<10?1:0;
+  const target=distToEarth<11?1:0;
   transAlpha+=(target-transAlpha)*.02;
   transAlpha=Math.max(0,Math.min(1,transAlpha));
   fader.style.opacity=transAlpha*.7; // white fade for cloud transition
