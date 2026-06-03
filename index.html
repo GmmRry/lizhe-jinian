@@ -204,7 +204,7 @@ function animate(ts){
     else { exitSurface(); }
   }
 
-  hint.textContent = isSurface ? '🗺️ 真实地图 · 三兄弟位置'
+  hint.textContent = isSurface ? '🗺️ 三条流星 · 汇聚于此'
     : distToEarth < 18 ? '🔭 继续滚动缩小...进入地球...'
     : '拖拽旋转 · 滚轮缩放 · 靠近蓝色光点';
 
@@ -263,9 +263,9 @@ function enterSurface(){
 
     // Three brothers as glowing circle markers
     const brothers = [
-      {name:'羿应竣', city:'山西晋中', lat:37.69, lng:112.74, color:'#ff5533'},
-      {name:'李林喆', city:'湖北荆州监利', lat:29.82, lng:112.90, color:'#33aaff'},
-      {name:'龚铭名', city:'广州', lat:23.13, lng:113.26, color:'#22dd66'},
+      {lat:37.69, lng:112.74, color:'#ff5533'},
+      {lat:29.82, lng:112.90, color:'#33aaff'},
+      {lat:23.13, lng:113.26, color:'#22dd66'},
     ];
 
     const points = [];
