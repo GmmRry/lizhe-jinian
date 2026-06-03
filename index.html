@@ -8,16 +8,16 @@
   *{margin:0;padding:0;box-sizing:border-box}
   body{background:#020210;overflow:hidden;cursor:crosshair}
   canvas{display:block;position:fixed;top:0;left:0}
-  .vignette{
-    position:fixed;inset:0;z-index:2;pointer-events:none;
-    box-shadow:inset 0 0 260px 50px rgba(2,2,16,.85);
-  }
   .hint{
     position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
     z-index:3;pointer-events:none;
     font-family:'PingFang SC','Noto Sans SC',sans-serif;
-    font-size:.6rem;letter-spacing:.28em;color:rgba(255,255,255,.13);
-    transition:opacity .8s;
+    font-size:.6rem;letter-spacing:.28em;color:rgba(255,255,255,.14);
+    transition:opacity .6s;
+  }
+  .vignette{
+    position:fixed;inset:0;z-index:2;pointer-events:none;
+    box-shadow:inset 0 0 240px 45px rgba(2,2,16,.82);
   }
 </style>
 </head>
@@ -41,40 +41,32 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// ── Scene ──
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x020210, .00015);
+scene.fog = new THREE.FogExp2(0x020210, .00008);
 
-const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, .5, 500);
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, .5, 600);
 camera.position.set(0, 0, 30);
 
 const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.15;
 document.body.appendChild(renderer.domElement);
 
-// ── Post ──
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.85,.4,.15);
-bloom.threshold = .08; bloom.strength = 1.35; bloom.radius = .65;
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.8,.4,.15);
+bloom.threshold = .08; bloom.strength = 1.3; bloom.radius = .6;
 composer.addPass(bloom);
 
-// ── Controls (wide range) ──
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = .06;
-controls.autoRotate = true;
-controls.autoRotateSpeed = .2;
-controls.minDistance = 3;
-controls.maxDistance = 200;
-controls.maxPolarAngle = Math.PI * .78;
-controls.target.set(0, 0, 0);
-controls.update();
+controls.enableDamping = true; controls.dampingFactor = .06;
+controls.autoRotate = true; controls.autoRotateSpeed = .15;
+controls.minDistance = 3; controls.maxDistance = 300;
+controls.maxPolarAngle = Math.PI * .75;
+controls.target.set(0, 0, 0); controls.update();
 
-// ── Mouse ──
 const mouse = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 window.addEventListener('mousemove', e => {
@@ -82,163 +74,266 @@ window.addEventListener('mousemove', e => {
   mouse.y = -(e.clientY / innerHeight) * 2 + 1;
 });
 
-// ── 🌍 Earth (far away - visible when zoomed out) ──
-const earthGroup = new THREE.Group();
-scene.add(earthGroup);
+const loader = new THREE.TextureLoader();
 
-const texLoader = new THREE.TextureLoader();
-const earthTex = texLoader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
-earthTex.colorSpace = THREE.SRGBColorSpace;
+// ═══════════════════════════════════════════
+// ☀️ SUN
+// ═══════════════════════════════════════════
+const sunGroup = new THREE.Group();
+sunGroup.position.set(90, 15, -120);
+scene.add(sunGroup);
 
-const earthGeo = new THREE.SphereGeometry(6, 72, 72);
-const earthMat = new THREE.MeshStandardMaterial({
-  map: earthTex,
-  roughness: .7,
-  metalness: .05,
-});
-const earth = new THREE.Mesh(earthGeo, earthMat);
-earth.position.set(0, -60, -80);
-earth.name = 'earth';
-earthGroup.add(earth);
-
-// Atmosphere glow
-const atmoGeo = new THREE.SphereGeometry(6.15, 72, 72);
-const atmoMat = new THREE.ShaderMaterial({
+const sunGeo = new THREE.SphereGeometry(14, 64, 64);
+const sunMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } },
   vertexShader: `
-    varying vec3 vNormal; varying vec3 vPosition;
-    void main() { vNormal = normalize(normalMatrix * normal); vPosition = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+    varying vec2 vUv; varying vec3 vPos;
+    void main() { vUv = uv; vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+  `,
+  fragmentShader: `
+    varying vec2 vUv; varying vec3 vPos; uniform float uTime;
+    float noise(vec3 p){
+      return fract(sin(dot(p,vec3(12.9898,78.233,45.5432)))*43758.5453);
+    }
+    void main() {
+      float n = noise(vPos + uTime * .3) * .15;
+      float d = length(vPos) / 14.;
+      vec3 col = mix(vec3(1., .85, .2), vec3(1., .35, .05), d);
+      col += n * .1;
+      float glow = 1. - smoothstep(.7, 1., d);
+      gl_FragColor = vec4(col, glow);
+    }
+  `,
+  blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
+});
+const sun = new THREE.Mesh(sunGeo, sunMat);
+sunGroup.add(sun);
+
+// Sun corona
+const coronaGeo = new THREE.SphereGeometry(16, 64, 64);
+const coronaMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } },
+  vertexShader: `
+    varying vec3 vNormal;
+    void main() { vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
   `,
   fragmentShader: `
     varying vec3 vNormal;
     void main() {
-      float intensity = pow(.65 - dot(vNormal, vec3(0., 0., 1.)), 3.);
-      gl_FragColor = vec4(.3, .5, 1., intensity * .5);
+      float rim = 1. - abs(dot(vNormal, vec3(0., 0., 1.)));
+      float alpha = pow(rim, 3.5) * .25;
+      gl_FragColor = vec4(1., .6, .1, alpha);
     }
   `,
-  blending: THREE.AdditiveBlending,
-  depthWrite: false,
-  transparent: true,
+  blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
 });
-const atmo = new THREE.Mesh(atmoGeo, atmoMat);
-atmo.position.copy(earth.position);
-earthGroup.add(atmo);
+const corona = new THREE.Mesh(coronaGeo, coronaMat);
+sunGroup.add(corona);
 
-// Ambient light for Earth
-const ambient = new THREE.AmbientLight(0x224488, .8);
-scene.add(ambient);
-const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
-sunLight.position.set(30, 20, 10);
+// Sun directional light (illuminates Earth)
+const sunLight = new THREE.DirectionalLight(0xffeedd, 2.5);
+sunLight.position.copy(sunGroup.position);
 scene.add(sunLight);
+scene.add(new THREE.AmbientLight(0x112244, .4));
 
-// Stars (far background)
-const starsGeo = new THREE.BufferGeometry();
-const STARS = 3000;
-const sPos = new Float32Array(STARS * 3);
-for(let i=0;i<STARS;i++){
-  const theta = Math.random() * Math.PI * 2;
-  const phi = Math.acos(2 * Math.random() - 1);
-  const r = 120 + Math.random() * 80;
-  sPos[i*3] = r * Math.sin(phi) * Math.cos(theta);
-  sPos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-  sPos[i*3+2] = r * Math.cos(phi);
-}
-starsGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
-const stars = new THREE.Points(starsGeo, new THREE.PointsMaterial({
-  size:.12, color:0xffffff, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:.7,
+// ═══════════════════════════════════════════
+// 🌍 EARTH with clouds
+// ═══════════════════════════════════════════
+const earthGroup = new THREE.Group();
+earthGroup.position.set(0, -80, -100);
+scene.add(earthGroup);
+
+const earthTex = loader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
+earthTex.colorSpace = THREE.SRGBColorSpace;
+
+const eGeo = new THREE.SphereGeometry(7, 72, 72);
+const eMat = new THREE.MeshStandardMaterial({ map: earthTex, roughness: .6, metalness: .03 });
+const earth = new THREE.Mesh(eGeo, eMat);
+earthGroup.add(earth);
+
+// Atmosphere
+const atmoGeo2 = new THREE.SphereGeometry(7.2, 72, 72);
+const atmoMat2 = new THREE.ShaderMaterial({
+  vertexShader: `varying vec3 vN; void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader: `varying vec3 vN;void main(){float i=pow(.7-dot(vN,vec3(0.,0.,1.)),3.5);gl_FragColor=vec4(.25,.5,1.,i*.45);}`,
+  blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
+});
+const atmo2 = new THREE.Mesh(atmoGeo2, atmoMat2);
+earthGroup.add(atmo2);
+
+// Cloud layer
+const cloudGeo = new THREE.SphereGeometry(7.12, 64, 64);
+const cloudMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } },
+  vertexShader: `varying vec3 vP; varying vec3 vN; void main(){vP=position;vN=normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader: `
+    varying vec3 vP; varying vec3 vN; uniform float uTime;
+    float noise(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+    float fbm(vec3 p){
+      float v=0.,a=.5;vec3 s=p;
+      for(int i=0;i<4;i++){v+=a*noise(s);s*=2.;a*=.5;}
+      return v;
+    }
+    void main(){
+      float c=fbm(vP*.8+uTime*.05);
+      c=pow(c,2.5);
+      float alpha=c*.35;
+      gl_FragColor=vec4(1.,1.,1.,alpha);
+    }
+  `,
+  blending: THREE.NormalBlending, depthWrite: false, transparent: true, opacity: .7,
+});
+const clouds = new THREE.Mesh(cloudGeo, cloudMat);
+earthGroup.add(clouds);
+
+// ═══════════════════════════════════════════
+// 🌙 MOON
+// ═══════════════════════════════════════════
+const moonGroup = new THREE.Group();
+moonGroup.position.copy(earthGroup.position);
+scene.add(moonGroup);
+
+const moonGeo = new THREE.SphereGeometry(1.8, 32, 32);
+const moonMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: .85, metalness: 0 });
+const moon = new THREE.Mesh(moonGeo, moonMat);
+moon.position.set(15, 3, 0);
+moonGroup.add(moon);
+
+// Moon orbit ring
+const orbitGeo = new THREE.TorusGeometry(15, .02, 16, 100);
+const orbitLine = new THREE.Mesh(orbitGeo, new THREE.MeshBasicMaterial({
+  color: 0x334466, transparent: true, opacity: .25,
 }));
-scene.add(stars);
+orbitLine.rotation.x = Math.PI * .4;
+moonGroup.add(orbitLine);
 
-// ── Nebula Core ──
-const coreGeo = new THREE.BufferGeometry();
-const CORE = 2500;
-const corePos = new Float32Array(CORE*3); const coreCol = new Float32Array(CORE*3);
-for(let i=0;i<CORE;i++){
-  const t=Math.random()*Math.PI*2;
-  const r=Math.pow(Math.random(),2)*11;
-  const s=t+r*.4;
-  corePos[i*3]=Math.cos(s)*r+(Math.random()-.5)*r*.45;
-  corePos[i*3+1]=(Math.random()-.5)*r*.32;
-  corePos[i*3+2]=Math.sin(s)*r*.5+(Math.random()-.5)*r*.35;
-  const col=new THREE.Color();col.setHSL(.6+(r/11)*.09,.88,.5+Math.random()*.42);
-  coreCol[i*3]=col.r;coreCol[i*3+1]=col.g;coreCol[i*3+2]=col.b;
+// ═══════════════════════════════════════════
+// 🔴 MARS (small, far)
+// ═══════════════════════════════════════════
+const marsGeo = new THREE.SphereGeometry(3.5, 48, 48);
+const marsMat = new THREE.MeshStandardMaterial({ color: 0xcc4422, roughness: .75, metalness: .05 });
+const mars = new THREE.Mesh(marsGeo, marsMat);
+mars.position.set(-70, -45, -150);
+scene.add(mars);
+
+// Mars atmosphere
+const marsAtmoGeo = new THREE.SphereGeometry(3.65, 48, 48);
+const marsAtmoMat = new THREE.ShaderMaterial({
+  vertexShader: `varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader: `varying vec3 vN;void main(){float i=pow(.65-dot(vN,vec3(0.,0.,1.)),4.);gl_FragColor=vec4(.8,.3,.15,i*.2);}`,
+  blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
+});
+const marsAtmo = new THREE.Mesh(marsAtmoGeo, marsAtmoMat);
+marsAtmo.position.copy(mars.position);
+scene.add(marsAtmo);
+
+// ═══════════════════════════════════════════
+// STARS
+// ═══════════════════════════════════════════
+const starsGeo = new THREE.BufferGeometry();
+const S = 4000;
+const sP = new Float32Array(S*3);
+for(let i=0;i<S;i++){
+  const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=200+Math.random()*200;
+  sP[i*3]=r*Math.sin(ph)*Math.cos(th);sP[i*3+1]=r*Math.sin(ph)*Math.sin(th);sP[i*3+2]=r*Math.cos(ph);
 }
-coreGeo.setAttribute('position',new THREE.BufferAttribute(corePos,3));
-coreGeo.setAttribute('color',new THREE.BufferAttribute(coreCol,3));
-const corePts = new THREE.Points(coreGeo, new THREE.PointsMaterial({
+starsGeo.setAttribute('position',new THREE.BufferAttribute(sP,3));
+scene.add(new THREE.Points(starsGeo,new THREE.PointsMaterial({
+  size:.15,color:0xffffff,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.65
+})));
+
+// ═══════════════════════════════════════════
+// NEBULA (foreground)
+// ═══════════════════════════════════════════
+// Core
+const cGeo=new THREE.BufferGeometry();
+const C=2500;const cP=new Float32Array(C*3);const cC=new Float32Array(C*3);
+for(let i=0;i<C;i++){
+  const t=Math.random()*Math.PI*2,r=Math.pow(Math.random(),2)*11,s=t+r*.4;
+  cP[i*3]=Math.cos(s)*r+(Math.random()-.5)*r*.45;
+  cP[i*3+1]=(Math.random()-.5)*r*.32;
+  cP[i*3+2]=Math.sin(s)*r*.5+(Math.random()-.5)*r*.35;
+  const col=new THREE.Color();col.setHSL(.6+r/11*.09,.88,.5+Math.random()*.42);
+  cC[i*3]=col.r;cC[i*3+1]=col.g;cC[i*3+2]=col.b;
+}
+cGeo.setAttribute('position',new THREE.BufferAttribute(cP,3));
+cGeo.setAttribute('color',new THREE.BufferAttribute(cC,3));
+const corePts=new THREE.Points(cGeo,new THREE.PointsMaterial({
   size:.06,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.9
 }));
 scene.add(corePts);
 
-// ── Mid Ring ──
-const ringGeo = new THREE.BufferGeometry();
-const RING = 2800;
-const rPos = new Float32Array(RING*3); const rCol = new Float32Array(RING*3);
-for(let i=0;i<RING;i++){
-  const t=Math.random()*Math.PI*2;
-  const radius=4.5+Math.random()*15;
-  rPos[i*3]=Math.cos(t)*radius; rPos[i*3+1]=(Math.random()-.5)*2.4; rPos[i*3+2]=Math.sin(t)*radius;
+// Ring
+const rGeo=new THREE.BufferGeometry();
+const R=2800;const rP=new Float32Array(R*3);const rC=new Float32Array(R*3);
+for(let i=0;i<R;i++){
+  const t=Math.random()*Math.PI*2,rad=4.5+Math.random()*15;
+  rP[i*3]=Math.cos(t)*rad;rP[i*3+1]=(Math.random()-.5)*2.4;rP[i*3+2]=Math.sin(t)*rad;
   const col=new THREE.Color();col.setHSL(.57+Math.random()*.16,.65,.55+Math.random()*.35);
-  rCol[i*3]=col.r;rCol[i*3+1]=col.g;rCol[i*3+2]=col.b;
+  rC[i*3]=col.r;rC[i*3+1]=col.g;rC[i*3+2]=col.b;
 }
-ringGeo.setAttribute('position',new THREE.BufferAttribute(rPos,3));
-ringGeo.setAttribute('color',new THREE.BufferAttribute(rCol,3));
-const ringPts = new THREE.Points(ringGeo, new THREE.PointsMaterial({
+rGeo.setAttribute('position',new THREE.BufferAttribute(rP,3));
+rGeo.setAttribute('color',new THREE.BufferAttribute(rC,3));
+const ringPts=new THREE.Points(rGeo,new THREE.PointsMaterial({
   size:.045,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.6
 }));
 scene.add(ringPts);
 
-// ── Floating Dust ──
-const dustGeo = new THREE.BufferGeometry();
-const DUST = 1000;
-const dPos = new Float32Array(DUST*3); const dCol = new Float32Array(DUST*3);
-const dustData = [];
-for(let i=0;i<DUST;i++){
+// Dust
+const dGeo=new THREE.BufferGeometry();
+const D=1000;const dP=new Float32Array(D*3);const dC=new Float32Array(D*3);
+const dustData=[];
+for(let i=0;i<D;i++){
   const x=(Math.random()-.5)*45,y=(Math.random()-.5)*28,z=(Math.random()-.5)*40;
-  dPos[i*3]=x;dPos[i*3+1]=y;dPos[i*3+2]=z;
+  dP[i*3]=x;dP[i*3+1]=y;dP[i*3+2]=z;
   dustData.push({x,y,z,vx:(Math.random()-.5)*.006,vy:(Math.random()-.5)*.006,vz:(Math.random()-.5)*.006});
   const col=new THREE.Color();col.setHSL(.58+Math.random()*.16,.45,.5+Math.random()*.4);
-  dCol[i*3]=col.r;dCol[i*3+1]=col.g;dCol[i*3+2]=col.b;
+  dC[i*3]=col.r;dC[i*3+1]=col.g;dC[i*3+2]=col.b;
 }
-dustGeo.setAttribute('position',new THREE.BufferAttribute(dPos,3));
-dustGeo.setAttribute('color',new THREE.BufferAttribute(dCol,3));
-const dustPts = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+dGeo.setAttribute('position',new THREE.BufferAttribute(dP,3));
+dGeo.setAttribute('color',new THREE.BufferAttribute(dC,3));
+const dustPts=new THREE.Points(dGeo,new THREE.PointsMaterial({
   size:.035,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.45
 }));
 scene.add(dustPts);
 
-// ── Mouse Trail ──
-const trailGeo = new THREE.BufferGeometry();
-const TRAIL = 120;
-const tPos = new Float32Array(TRAIL*3); const tLife = new Float32Array(TRAIL);
-for(let i=0;i<TRAIL;i++){tPos[i*3]=tPos[i*3+1]=tPos[i*3+2]=0;tLife[i]=0;}
-trailGeo.setAttribute('position',new THREE.BufferAttribute(tPos,3));
-const trailPts = new THREE.Points(trailGeo, new THREE.PointsMaterial({
+// Trail
+const trGeo=new THREE.BufferGeometry();
+const TR=120;const trP=new Float32Array(TR*3);const trL=new Float32Array(TR);
+for(let i=0;i<TR;i++){trP[i*3]=trP[i*3+1]=trP[i*3+2]=0;trL[i]=0;}
+trGeo.setAttribute('position',new THREE.BufferAttribute(trP,3));
+const trailPts=new THREE.Points(trGeo,new THREE.PointsMaterial({
   size:.09,color:new THREE.Color('#c8b0ff'),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.7
 }));
 scene.add(trailPts);
 
-// ── Animate ──
-const clock = new THREE.Clock();
-let trailIdx = 0;
-const plane = new THREE.Plane(new THREE.Vector3(0,0,1),0);
-const hint = document.getElementById('hint');
+// ═══════════════════════════════════════════
+// ANIMATE
+// ═══════════════════════════════════════════
+const clock=new THREE.Clock();
+let ti=0;const plane=new THREE.Plane(new THREE.Vector3(0,0,1),0);
+const hint=document.getElementById('hint');
 
-function animate(){
-  const dt = Math.min(clock.getDelta(), .12);
-  const dist = camera.position.length();
+function animate(ts){
+  const dt=Math.min(clock.getDelta(),.12);
+  const dist=camera.position.length();
 
-  // Fade hint based on zoom
-  hint.style.opacity = Math.max(0, Math.min(1, (80 - dist) / 40));
+  hint.textContent = dist > 120 ? '☀️ 太阳系' : dist > 50 ? '🌍 轨道视角' : '✨ 滚轮缩放 · 拖拽旋转';
+  hint.style.opacity = Math.max(0, Math.min(1, (180 - dist) / 80));
 
-  // Rotate particles
+  // Rotations
   corePts.rotation.y += dt*.055;
-  ringPts.rotation.y -= dt*.03;
-  ringPts.rotation.x += dt*.01;
-  earth.rotation.y += dt*.04;
+  ringPts.rotation.y -= dt*.03; ringPts.rotation.x += dt*.01;
+  earth.rotation.y += dt*.05;
+  clouds.rotation.y += dt*.07; clouds.rotation.x += dt*.015;
+  clouds.material.uniforms.uTime.value = ts*.001;
+  moonGroup.rotation.z += dt*.08;
+  sun.material.uniforms.uTime.value = ts*.001;
+  mars.rotation.y += dt*.03;
 
-  // Float dust
-  const dp = dustPts.geometry.attributes.position.array;
-  for(let i=0;i<DUST;i++){
+  // Dust
+  const dp=dustPts.geometry.attributes.position.array;
+  for(let i=0;i<D;i++){
     const d=dustData[i];d.x+=d.vx;d.y+=d.vy;d.z+=d.vz;
     if(Math.abs(d.x)>22)d.vx*=-1;if(Math.abs(d.y)>14)d.vy*=-1;if(Math.abs(d.z)>20)d.vz*=-1;
     dp[i*3]=d.x;dp[i*3+1]=d.y;dp[i*3+2]=d.z;
@@ -249,19 +344,16 @@ function animate(){
   raycaster.setFromCamera(mouse,camera);
   const hit=new THREE.Vector3();
   raycaster.ray.intersectPlane(plane,hit);
-  if(hit&&Math.random()<.55){
+  if(hit&&Math.random()<.5){
     const tp=trailPts.geometry.attributes.position.array;
-    const i=trailIdx%TRAIL;
+    const i=ti%TR;
     tp[i*3]=hit.x+(Math.random()-.5)*.2;
     tp[i*3+1]=hit.y+(Math.random()-.5)*.2;
     tp[i*3+2]=(Math.random()-.5)*.1;
-    tLife[i]=1;trailIdx++;
+    trL[i]=1;ti++;
   }
   const tp2=trailPts.geometry.attributes.position.array;
-  for(let i=0;i<TRAIL;i++){
-    tLife[i]-=dt*1.4;
-    if(tLife[i]<=0){tp2[i*3]=tp2[i*3+1]=tp2[i*3+2]=0;tLife[i]=0;}
-  }
+  for(let i=0;i<TR;i++){trL[i]-=dt*1.4;if(trL[i]<=0){tp2[i*3]=tp2[i*3+1]=tp2[i*3+2]=0;trL[i]=0;}}
   trailPts.geometry.attributes.position.needsUpdate=true;
 
   controls.update();
