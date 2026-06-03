@@ -22,7 +22,7 @@ import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 const scene=new THREE.Scene;
-scene.fog=new THREE.FogExp2(0x020210,.00006);
+scene.fog=new THREE.FogExp2(0x020210,.00002);
 const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.3,600);
 camera.position.set(0,0,30);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
@@ -61,7 +61,7 @@ scene.add(new THREE.AmbientLight(0x112244,.4));
 const earthGroup=new THREE.Group;earthGroup.position.set(0,-80,-100);scene.add(earthGroup);
 const earthTex=loader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');earthTex.colorSpace=THREE.SRGBColorSpace;
 const earth=new THREE.Mesh(new THREE.SphereGeometry(7,72,72),new THREE.MeshStandardMaterial({map:earthTex,roughness:.6,metalness:.03}));earthGroup.add(earth);
-const atMat=new THREE.ShaderMaterial({vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vN;void main(){float i=pow(.7-dot(vN,vec3(0.,0.,1.)),3.5);gl_FragColor=vec4(.25,.5,1.,i*.4);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
+const atMat=new THREE.ShaderMaterial({vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vN;void main(){float i=pow(.7-dot(vN,vec3(0.,0.,1.)),3.5);gl_FragColor=vec4(.3,.55,1.,i*.5);}`,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
 earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(7.2,72,72),atMat));
 const clMat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0}},vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vP;uniform float uTime;float n(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.);}float f(vec3 p){float v=0.,a=.5;vec3 s=p;for(int i=0;i<4;i++){v+=a*n(s);s*=2.;a*=.5;}return v;}void main(){float c=pow(f(vP*.8+uTime*.05),2.5);gl_FragColor=vec4(1.,1.,1.,c*.35);}`,blending:THREE.NormalBlending,depthWrite:false,transparent:true});
 const clouds=new THREE.Mesh(new THREE.SphereGeometry(7.15,64,64),clMat);earthGroup.add(clouds);
@@ -70,8 +70,7 @@ const clouds=new THREE.Mesh(new THREE.SphereGeometry(7.15,64,64),clMat);earthGro
 const moonGroup=new THREE.Group;moonGroup.position.copy(earthGroup.position);scene.add(moonGroup);
 moonGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.8,32,32),new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.85})));
 moonGroup.children[0].position.set(15,3,0);
-const orbRing=new THREE.Mesh(new THREE.TorusGeometry(15,.02,16,100),new THREE.MeshBasicMaterial({color:0x334466,transparent:true,opacity:.25}));
-orbRing.rotation.x=Math.PI*.4;moonGroup.add(orbRing);
+// moon orbit ring removed for clarity
 
 // ── MARS ──
 const mars=new THREE.Mesh(new THREE.SphereGeometry(3.5,48,48),new THREE.MeshStandardMaterial({color:0xcc4422,roughness:.75}));
@@ -153,7 +152,7 @@ const convY=Math.max(...brothers.map(b=>b.terrainY))+14;
 convLocal.y=convY;
 
 // Surface fog
-const surfFog=new THREE.FogExp2(0x8899bb,.006);
+const surfFog=new THREE.FogExp2(0x8899bb,.004);
 
 // Water
 const wGeo=new THREE.PlaneGeometry(tSize*2,tSize*2);wGeo.rotateX(-Math.PI/2);
@@ -298,7 +297,7 @@ const bGlow=new THREE.Mesh(bGlowGeo,bGlowMat);
 beaconGroup.add(bGlow);
 
 // Large outer glow for space visibility
-const bFarGeo=new THREE.SphereGeometry(5,32,32);
+const bFarGeo=new THREE.SphereGeometry(7,32,32);
 const bFarMat=new THREE.ShaderMaterial({
   uniforms:{uTime:{value:0}},
   vertexShader:`varying vec3 vN;void main(){vN=normalMatrix*normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
@@ -342,11 +341,11 @@ function animate(ts){
 
   // Surface transition
   const distToEarth=camera.position.distanceTo(earthGroup.position);
-  const shouldBeSurface=distToEarth<10;
+  const shouldBeSurface=distToEarth<14;
   const targetAlpha=shouldBeSurface?1:0;
-  transitionAlpha+=(targetAlpha-transitionAlpha)*.05;
+  transitionAlpha+=(targetAlpha-transitionAlpha)*.03;
   transitionAlpha=Math.max(0,Math.min(1,transitionAlpha));
-  fader.style.opacity=transitionAlpha*.35;
+  fader.style.opacity=transitionAlpha*.5;
 
   const showSurface=transitionAlpha>.5;
   if(showSurface!==isSurfaceMode){
@@ -363,7 +362,7 @@ function animate(ts){
   // Space beacon visibility - brightest when NOT in surface mode
   beaconGroup.visible=true;
   const spaceBeaconAlpha=isSurfaceMode?.15:1;
-  bCoreMat.opacity=spaceBeaconAlpha;
+  bCoreMat.opacity=spaceBeaconAlpha+.3;
   bGlow.material.uniforms.uTime.value=t;
   bFar.material.uniforms.uTime.value=t;
 
@@ -373,7 +372,7 @@ function animate(ts){
 
   // Hint
   if(isSurfaceMode)hint.textContent='🌿 三兄弟的信号在天空汇聚';
-  else if(distToEarth<25)hint.textContent='✨ 地球上有光芒...靠近看看';
+  else if(distToEarth<30)hint.textContent='✨ 继续缩小进入地表...';
   else if(dist>120)hint.textContent='☀️ 太阳系';
   else hint.textContent='那个光点是什么？缩小靠近地球';
   hint.style.opacity=Math.max(0,Math.min(1,(180-dist)/80));
