@@ -41,6 +41,7 @@ controls.target.set(0,0,0);controls.update();
 const mouse=new THREE.Vector2,raycaster=new THREE.Raycaster;
 window.addEventListener('mousemove',e=>{mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1});
 
+const loader=new THREE.TextureLoader;
 // ── Simple noise ──
 function fract(n){return n-Math.floor(n)}
 function hash2(n){return fract(Math.sin(n)*43758.5453)}
