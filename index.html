@@ -24,19 +24,19 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 const scene=new THREE.Scene;
 scene.fog=new THREE.FogExp2(0x000011,.00002);
 const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.5,800);
-camera.position.set(0,3,38);
+camera.position.set(0,2,32);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2.5));
 renderer.setSize(innerWidth,innerHeight);
-renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.4;
 document.body.appendChild(renderer.domElement);
 const composer=new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene,camera));
 const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.9,.4,.1);
-bloom.threshold=.05;bloom.strength=1.5;bloom.radius=.7;composer.addPass(bloom);
+bloom.threshold=.03;bloom.strength=1.8;bloom.radius=.75;composer.addPass(bloom);
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;controls.dampingFactor=.06;controls.autoRotate=true;controls.autoRotateSpeed=.12;
-controls.minDistance=1;controls.maxDistance=350;controls.maxPolarAngle=Math.PI*.7;
+controls.minDistance=.5;controls.maxDistance=350;controls.maxPolarAngle=Math.PI*.7;
 controls.target.set(0,0,0);controls.update();
 const mouse=new THREE.Vector2,raycaster=new THREE.Raycaster;
 window.addEventListener('mousemove',e=>{mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1});
@@ -65,7 +65,7 @@ const earth=new THREE.Mesh(eGeo,eMat);earthGroup.add(earth);
 
 // Atmosphere shell
 const atGeo=new THREE.SphereGeometry(EARTH_R*1.02,64,64);
-const atMat=new THREE.MeshBasicMaterial({color:0x4488cc,transparent:true,opacity:.08,blending:THREE.AdditiveBlending,depthWrite:false});
+const atMat=new THREE.MeshBasicMaterial({color:0x4488cc,transparent:true,opacity:.12,blending:THREE.AdditiveBlending,depthWrite:false});
 earthGroup.add(new THREE.Mesh(atGeo,atMat));
 
 // Cloud shell
@@ -114,12 +114,12 @@ function createNebula(count,innerR,outerR,spreadY,colors){
   g.setAttribute('color',new THREE.BufferAttribute(c,3));
   return g;
 }
-spaceP.add(new THREE.Points(createNebula(3000,10,18,3,[.58,.12,.85,.5,.4]),new THREE.PointsMaterial({size:.07,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.9})));
-spaceP.add(new THREE.Points(createNebula(3500,4,18,2.5,[.56,.16,.65,.5,.4]),new THREE.PointsMaterial({size:.05,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.65})));
-spaceP.add(new THREE.Points(createNebula(2000,0,50,30,[.55,.2,.4,.4,.4]),new THREE.PointsMaterial({size:.04,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.4})));
+spaceP.add(new THREE.Points(createNebula(4000,10,20,3.5,[.58,.12,.85,.5,.4]),new THREE.PointsMaterial({size:.09,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.95})));
+spaceP.add(new THREE.Points(createNebula(5000,3,22,3,[.56,.16,.65,.5,.4]),new THREE.PointsMaterial({size:.06,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.75})));
+spaceP.add(new THREE.Points(createNebula(3000,0,60,35,[.55,.2,.4,.4,.4]),new THREE.PointsMaterial({size:.05,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.5})));
 
 // Stars
-const stGeo=new THREE.BufferGeometry;const ST=5000,stP=new Float32Array(ST*3);
+const stGeo=new THREE.BufferGeometry;const ST=6000,stP=new Float32Array(ST*3);
 for(let i=0;i<ST;i++){const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=180+Math.random()*220;stP[i*3]=r*Math.sin(ph)*Math.cos(th);stP[i*3+1]=r*Math.sin(ph)*Math.sin(th);stP[i*3+2]=r*Math.cos(ph)}
 stGeo.setAttribute('position',new THREE.BufferAttribute(stP,3));
 spaceP.add(new THREE.Points(stGeo,new THREE.PointsMaterial({size:.18,color:0xffffff,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.6})));
@@ -160,7 +160,7 @@ for(let i=0;i<hPos.length/3;i++){
   hPos[i*3+1]=Math.abs(fbm(x*.15,z*.15))*2.5+Math.abs(fbm(x*.4,z*.4))*.8;
 }
 hGeo.computeVertexNormals();
-surfaceGroup.add(new THREE.Mesh(hGeo,new THREE.MeshStandardMaterial({color:0x335522,roughness:.95,metalness:0,transparent:true,opacity:.35,depthWrite:false})));
+surfaceGroup.add(new THREE.Mesh(hGeo,new THREE.MeshStandardMaterial({color:0x2d5a1e,roughness:.9,metalness:0,transparent:true,opacity:.4,depthWrite:false})));
 
 // Scattered trees
 for(let i=0;i<100;i++){
@@ -267,8 +267,8 @@ function animate(ts){
   const distToEarth=camera.position.distanceTo(earthGroup.position);
 
   // Surface transition
-  const target=distToEarth<11?1:0;
-  transAlpha+=(target-transAlpha)*.02;
+  const target=distToEarth<13?1:0;
+  transAlpha+=(target-transAlpha)*.04;
   transAlpha=Math.max(0,Math.min(1,transAlpha));
   fader.style.opacity=transAlpha*.7; // white fade for cloud transition
 
@@ -286,7 +286,7 @@ function animate(ts){
 
   // Hint
   if(isSurface)hint.textContent='🌠 三颗流星汇聚于天际';
-  else if(distToEarth<15)hint.textContent='🌠 继续缩小...';
+  else if(distToEarth<20)hint.textContent='🌍 继续滚动缩小...进入地球...';
   else if(dist>150)hint.textContent='☀️ 深空';
   else hint.textContent='拖拽旋转 · 滚轮缩放 · 靠近那个光点';
   hint.style.opacity=Math.max(0,Math.min(1,(180-dist)/80));
